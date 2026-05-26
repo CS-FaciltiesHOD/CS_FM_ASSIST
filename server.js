@@ -31,6 +31,7 @@ function getSession(userId) {
     if (!sessions[userId]) {
         sessions[userId] = {
             history: [],
+            media: [],
             lastActive: Date.now()
         };
     }
@@ -68,7 +69,8 @@ async function getAIResponse(userId, userMessage) {
     }
 }
 
-function handleCompletedReport(userId, reportText) {
+async function handleCompletedReport(userId, reportText) {
+    const session = getSession(userId);
     const lines = reportText.split('\n');
     const data = {
         ticketId: reportText.match(/#([A-Z0-9-]+)/)?.[1] || 'UNKNOWN',
@@ -85,8 +87,44 @@ function handleCompletedReport(userId, reportText) {
         failureMode: lines.find(l => l.includes('Failing to'))?.split(':')[1]?.trim(),
         priority: lines.find(l => l.includes('Priority'))?.split(':')[1]?.trim(),
         faultType: lines.find(l => l.includes('Fault type'))?.split(':')[1]?.trim(),
+        history: session.history,
+        technicianNeeded: reportText.includes('Technician needed:  Yes') ? 'Yes' : 'No'
     };
-    sendFaultNotification(data);
+    
+    await sendFaultNotification(data, session.media);
+    
+    // Clear session media after submission
+    session.media = [];
+}
+
+/**
+ * Downloads a media file from Meta's servers.
+ */
+async function downloadWhatsAppMedia(mediaId) {
+    try {
+        const response = await axios.get(`https://graph.facebook.com/v17.0/${mediaId}`, {
+            headers: { Authorization: `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}` }
+        });
+        
+        const mediaUrl = response.data.url;
+        const mimeType = response.data.mime_type;
+        const extension = mimeType.split('/')[1] || 'bin';
+        const filename = `media_${mediaId}.${extension}`;
+
+        const mediaFile = await axios.get(mediaUrl, {
+            headers: { Authorization: `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}` },
+            responseType: 'arraybuffer'
+        });
+
+        return {
+            buffer: Buffer.from(mediaFile.data),
+            mime_type: mimeType,
+            filename: filename
+        };
+    } catch (error) {
+        console.error('Error downloading WhatsApp media:', error.message);
+        return null;
+    }
 }
 
 // ==========================================
@@ -107,9 +145,6 @@ app.get('/api/webhook/whatsapp', (req, res) => {
     }
 });
 
-/**
- * Formats a text response into a WhatsApp Interactive message if it contains options.
- */
 function formatWhatsAppMessage(to, text) {
     if (text.toLowerCase().includes('options: yes / no')) {
         const bodyText = text.replace(/options:\s*yes\s*\/\s*no/gi, '').trim();
@@ -179,6 +214,7 @@ app.post('/api/webhook/whatsapp', async (req, res) => {
         if (!message) return res.sendStatus(200);
 
         const from = message.from;
+        const session = getSession(`wa-${from}`);
         let userText = "";
 
         if (message.type === 'text') {
@@ -189,6 +225,13 @@ app.post('/api/webhook/whatsapp', async (req, res) => {
                 userText = interactive.button_reply.title;
             } else if (interactive.type === 'list_reply') {
                 userText = interactive.list_reply.title;
+            }
+        } else if (message.type === 'image' || message.type === 'video') {
+            const mediaId = message.image?.id || message.video?.id;
+            const mediaData = await downloadWhatsAppMedia(mediaId);
+            if (mediaData) {
+                session.media.push(mediaData);
+                userText = "[User sent a " + message.type + "]";
             }
         }
 
