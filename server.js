@@ -25,13 +25,8 @@ if (process.env.ANTHROPIC_API_KEY) {
     console.warn('WARNING: ANTHROPIC_API_KEY is missing. AI features will be disabled.');
 }
 
-// Simple in-memory session storage
-// In production, use Redis
 const sessions = {};
 
-/**
- * Gets or creates a session for a user.
- */
 function getSession(userId) {
     if (!sessions[userId]) {
         sessions[userId] = {
@@ -43,13 +38,8 @@ function getSession(userId) {
     return sessions[userId];
 }
 
-/**
- * Handles communication with Claude AI.
- */
 async function getAIResponse(userId, userMessage) {
     const session = getSession(userId);
-    
-    // Add user message to history
     session.history.push({ role: 'user', content: userMessage });
 
     if (!anthropic) {
@@ -65,11 +55,8 @@ async function getAIResponse(userId, userMessage) {
         });
 
         const aiReply = response.content[0].text;
-        
-        // Add AI reply to history
         session.history.push({ role: 'assistant', content: aiReply });
 
-        // Check if a report was completed (simple heuristic)
         if (aiReply.includes('━━━ FM FAULT REPORT #')) {
             handleCompletedReport(userId, aiReply);
         }
@@ -81,12 +68,7 @@ async function getAIResponse(userId, userMessage) {
     }
 }
 
-/**
- * Parses the AI's report and triggers notifications.
- */
 function handleCompletedReport(userId, reportText) {
-    // Basic parsing logic to extract fields from the text report
-    // A more robust version would use Regex or ask Claude for JSON
     const lines = reportText.split('\n');
     const data = {
         ticketId: reportText.match(/#([A-Z0-9-]+)/)?.[1] || 'UNKNOWN',
@@ -104,8 +86,6 @@ function handleCompletedReport(userId, reportText) {
         priority: lines.find(l => l.includes('Priority'))?.split(':')[1]?.trim(),
         faultType: lines.find(l => l.includes('Fault type'))?.split(':')[1]?.trim(),
     };
-
-    // Trigger email/SLA notification
     sendFaultNotification(data);
 }
 
@@ -113,7 +93,6 @@ function handleCompletedReport(userId, reportText) {
 // WHATSAPP CLOUD API (META)
 // ==========================================
 
-// Verification endpoint for Meta
 app.get('/api/webhook/whatsapp', (req, res) => {
     const mode = req.query['hub.mode'];
     const token = req.query['hub.verify_token'];
@@ -121,7 +100,6 @@ app.get('/api/webhook/whatsapp', (req, res) => {
 
     if (mode && token) {
         if (mode === 'subscribe' && token === process.env.WHATSAPP_VERIFY_TOKEN) {
-            console.log('WhatsApp Webhook Verified');
             res.status(200).send(challenge);
         } else {
             res.sendStatus(403);
@@ -129,7 +107,68 @@ app.get('/api/webhook/whatsapp', (req, res) => {
     }
 });
 
-// Message handling endpoint
+/**
+ * Formats a text response into a WhatsApp Interactive message if it contains options.
+ */
+function formatWhatsAppMessage(to, text) {
+    if (text.toLowerCase().includes('options: yes / no')) {
+        const bodyText = text.replace(/options:\s*yes\s*\/\s*no/gi, '').trim();
+        return {
+            messaging_product: 'whatsapp',
+            to,
+            type: 'interactive',
+            interactive: {
+                type: 'button',
+                body: { text: bodyText || "Please select an option:" },
+                action: {
+                    buttons: [
+                        { type: 'reply', reply: { id: 'yes', title: 'Yes' } },
+                        { type: 'reply', reply: { id: 'no', title: 'No' } }
+                    ]
+                }
+            }
+        };
+    }
+
+    const lines = text.split('\n');
+    const listItems = lines.filter(l => /^\d+[\.\)]\s+.+/.test(l.trim()));
+
+    if (listItems.length >= 2 && listItems.length <= 10) {
+        const bodyText = lines.filter(l => !/^\d+[\.\)]\s+.+/.test(l.trim())).join('\n').trim();
+        const rows = listItems.map((item, index) => {
+            const cleanTitle = item.replace(/^\d+[\.\)]\s+/, '').trim().substring(0, 24);
+            return {
+                id: `option_${index + 1}`,
+                title: cleanTitle,
+                description: item.length > 24 ? item.substring(0, 72) : ""
+            };
+        });
+
+        return {
+            messaging_product: 'whatsapp',
+            to,
+            type: 'interactive',
+            interactive: {
+                type: 'list',
+                header: { type: 'text', text: 'Selection Required' },
+                body: { text: bodyText || "Please choose from the list below:" },
+                footer: { text: "FM Assist Diagnostic" },
+                action: {
+                    button: 'View Options',
+                    sections: [{ title: 'Available Options', rows }]
+                }
+            }
+        };
+    }
+
+    return {
+        messaging_product: 'whatsapp',
+        to,
+        type: 'text',
+        text: { body: text }
+    };
+}
+
 app.post('/api/webhook/whatsapp', async (req, res) => {
     try {
         const entry = req.body.entry?.[0];
@@ -137,22 +176,34 @@ app.post('/api/webhook/whatsapp', async (req, res) => {
         const value = changes?.value;
         const message = value?.messages?.[0];
 
-        if (message && message.type === 'text') {
-            const from = message.from; // User's phone number
-            const text = message.text.body;
+        if (!message) return res.sendStatus(200);
 
-            const aiReply = await getAIResponse(`wa-${from}`, text);
+        const from = message.from;
+        let userText = "";
 
-            // Send reply back via WhatsApp Cloud API
+        if (message.type === 'text') {
+            userText = message.text.body;
+        } else if (message.type === 'interactive') {
+            const interactive = message.interactive;
+            if (interactive.type === 'button_reply') {
+                userText = interactive.button_reply.title;
+            } else if (interactive.type === 'list_reply') {
+                userText = interactive.list_reply.title;
+            }
+        }
+
+        if (userText) {
+            const aiReply = await getAIResponse(`wa-${from}`, userText);
+            const whatsappPayload = formatWhatsAppMessage(from, aiReply);
+
             await axios.post(
                 `https://graph.facebook.com/v17.0/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`,
+                whatsappPayload,
                 {
-                    messaging_product: 'whatsapp',
-                    to: from,
-                    text: { body: aiReply },
-                },
-                {
-                    headers: { Authorization: `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}` },
+                    headers: { 
+                        Authorization: `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}`,
+                        'Content-Type': 'application/json'
+                    },
                 }
             );
         }
@@ -167,7 +218,6 @@ app.post('/api/webhook/whatsapp', async (req, res) => {
 // TELEGRAM BOT API
 // ==========================================
 if (process.env.TELEGRAM_BOT_TOKEN) {
-    // Only use polling if NOT on Vercel
     const isProduction = process.env.NODE_ENV === 'production';
     if (!isProduction) {
         const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: true });
@@ -178,9 +228,7 @@ if (process.env.TELEGRAM_BOT_TOKEN) {
                 bot.sendMessage(chatId, aiReply);
             }
         });
-        console.log('Telegram Bot Active (Polling)');
     } else {
-        // Vercel Webhook endpoint for Telegram
         app.post('/api/webhook/telegram', async (req, res) => {
             const { message } = req.body;
             if (message && message.text) {
@@ -198,19 +246,15 @@ if (process.env.TELEGRAM_BOT_TOKEN) {
 // WEBSITE CHAT API
 // ==========================================
 app.post('/api/chat', async (req, res) => {
-    // Simple protection: Check for a secret header
     if (req.headers['x-fm-secret'] !== process.env.CHAT_WIDGET_SECRET) {
         return res.status(403).json({ error: 'Unauthorized' });
     }
-
     const { sessionId, message } = req.body;
     if (!sessionId || !message) return res.status(400).json({ error: 'Missing sessionId or message' });
-
     const aiReply = await getAIResponse(`web-${sessionId}`, message);
     res.json({ reply: aiReply });
 });
 
-// Serve static files (for embed.html testing)
 app.use(express.static('.'));
 
 const PORT = process.env.PORT || 3000;
