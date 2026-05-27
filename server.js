@@ -97,7 +97,7 @@ async function handleCompletedReport(userId, reportText) {
         priority: getValue('Priority'),
         faultType: getValue('Fault type'),
         history: session.history,
-        technicianNeeded: reportText.toLowerCase().includes('technician needed: yes') ? 'Yes' : (reportText.toLowerCase().includes('technician needed: monitor') ? 'Monitor' : 'No')
+        technicianNeeded: /technician needed:\s*yes/i.test(reportText) ? 'Yes' : (/technician needed:\s*monitor/i.test(reportText) ? 'Monitor' : 'No')
     };
     
     await sendFaultNotification(data, session.media);
