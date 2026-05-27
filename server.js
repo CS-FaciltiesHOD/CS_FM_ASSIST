@@ -72,23 +72,32 @@ async function getAIResponse(userId, userMessage) {
 async function handleCompletedReport(userId, reportText) {
     const session = getSession(userId);
     const lines = reportText.split('\n');
+
+    const getValue = (label) => {
+        const line = lines.find(l => l.toLowerCase().includes(label.toLowerCase()));
+        if (!line) return 'N/A';
+        const parts = line.split(':');
+        if (parts.length < 2) return 'N/A';
+        return parts.slice(1).join(':').trim();
+    };
+
     const data = {
         ticketId: reportText.match(/#([A-Z0-9-]+)/)?.[1] || 'UNKNOWN',
-        store: lines.find(l => l.includes('Store'))?.split(':')[1]?.trim(),
-        reporter: lines.find(l => l.includes('Reported by'))?.split(':')[1]?.trim(),
-        category: lines.find(l => l.includes('Category'))?.split(':')[1]?.trim(),
-        equipment: lines.find(l => l.includes('Equipment'))?.split(':')[1]?.trim(),
-        brandModel: lines.find(l => l.includes('Brand'))?.split(':')[1]?.trim(),
-        assetTag: lines.find(l => l.includes('Asset tag'))?.split(':')[1]?.trim(),
-        serialNumber: lines.find(l => l.includes('Serial number'))?.split(':')[1]?.trim(),
-        location: lines.find(l => l.includes('Location'))?.split(':')[1]?.trim(),
-        powerStatus: lines.find(l => l.includes('Power status'))?.split(':')[1]?.trim(),
-        temperature: lines.find(l => l.includes('Temperature'))?.split(':')[1]?.trim(),
-        failureMode: lines.find(l => l.includes('Failing to'))?.split(':')[1]?.trim(),
-        priority: lines.find(l => l.includes('Priority'))?.split(':')[1]?.trim(),
-        faultType: lines.find(l => l.includes('Fault type'))?.split(':')[1]?.trim(),
+        store: getValue('Store'),
+        reporter: getValue('Reported by') !== 'N/A' ? getValue('Reported by') : getValue('Reporter'),
+        category: getValue('Category'),
+        equipment: getValue('Equipment'),
+        brandModel: getValue('Brand / Model') !== 'N/A' ? getValue('Brand / Model') : getValue('Brand'),
+        assetTag: getValue('Asset tag'),
+        serialNumber: getValue('Serial number'),
+        location: getValue('Location'),
+        powerStatus: getValue('Power status'),
+        temperature: getValue('Temperature'),
+        failureMode: getValue('Failing to'),
+        priority: getValue('Priority'),
+        faultType: getValue('Fault type'),
         history: session.history,
-        technicianNeeded: reportText.includes('Technician needed:  Yes') ? 'Yes' : 'No'
+        technicianNeeded: reportText.toLowerCase().includes('technician needed: yes') ? 'Yes' : (reportText.toLowerCase().includes('technician needed: monitor') ? 'Monitor' : 'No')
     };
     
     await sendFaultNotification(data, session.media);
