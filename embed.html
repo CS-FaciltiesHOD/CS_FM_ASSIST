@@ -63,12 +63,15 @@
         addMessage(text, true);
         chatInput.value = '';
 
+        // CHANGE THIS to your Vercel URL (e.g. https://api.southafricassoul.co.za/api/chat)
+        const BACKEND_URL = '/api/chat'; 
+
         try {
-            const response = await fetch('/api/chat', {
+            const response = await fetch(BACKEND_URL, {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
-                    'x-fm-secret': 'YOUR_WIDGET_SECRET' // This will match your .env
+                    'x-fm-secret': 'YOUR_WIDGET_SECRET' // This must match your CHAT_WIDGET_SECRET in Vercel
                 },
                 body: JSON.stringify({ sessionId, message: text })
             });
