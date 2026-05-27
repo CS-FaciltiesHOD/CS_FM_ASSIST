@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FM Assist — Fault Reporting Widget</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+
+/* ─── DESIGN TOKENS ──────────────────────────────────────────── */
+:root {
+  --navy:      #0A1F44;
+  --navy-deep: #061530;
+  --teal:      #028090;
+  --teal-glow: rgba(2,128,144,.18);
+  --mint:      #02C39A;
+  --mint-soft: rgba(2,195,154,.12);
+  --gold:      #F7B731;
+  --gold-soft: rgba(247,183,49,.15);
+  --red:       #E53935;
+  --red-soft:  rgba(229,57,53,.1);
+  --green:     #1DB954;
+  --green-soft:rgba(29,185,84,.12);
+  --surface:   #F6F8FC;
+  --surface2:  #EDF1F7;
+  --border:    rgba(10,31,68,.08);
+  --border2:   rgba(10,31,68,.14);
+  --text:      #1A2B4A;
+  --muted:     #6B7A99;
+  --white:     #FFFFFF;
+  --shadow-sm: 0 2px 8px rgba(10,31,68,.07);
+  --shadow-md: 0 4px 24px rgba(10,31,68,.10);
+  --shadow-lg: 0 8px 48px rgba(10,31,68,.14);
+  --r-sm: 10px;
+  --r-md: 16px;
+  --r-lg: 24px;
+  --r-xl: 32px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--surface);
+  min-height: 100vh;
+}
+
+/* ─── WIDGET CONTAINER (Floating) ─────────────────────── */
+.fm-widget-container {
+  position: fixed;
+  bottom: 90px;
+  right: 24px;
+  width: 400px;
+  max-width: calc(100vw - 48px);
+  max-height: calc(100vh - 120px);
+  z-index: 9999;
+  display: none; /* Hidden by default */
+  flex-direction: column;
+  animation: widgetIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: bottom right;
+}
+
+@keyframes widgetIn {
+  from { opacity: 0; transform: scale(0.9) translateY(20px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.fm-widget-container.active {
+  display: flex;
+}
+
+.fm-widget {
+  background: var(--white);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  height: 600px;
+  max-height: 100%;
+}
+
+/* ─── HEADER ─────────────────────────────────────────────────── */
+.fm-header {
+  background: linear-gradient(135deg, var(--navy-deep) 0%, var(--navy) 60%, #1a3a6e 100%);
+  padding: 20px 22px 18px;
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.fm-header::before {
+  content: '';
+  position: absolute;
+  top: -30px; right: -30px;
+  width: 120px; height: 120px;
+  background: radial-gradient(circle, var(--teal-glow) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.fm-header::after {
+  content: '';
+  position: absolute;
+  bottom: -20px; left: 30px;
+  width: 80px; height: 80px;
+  background: radial-gradient(circle, rgba(247,183,49,.08) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.fm-header-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.fm-logo {
+  width: 40px; height: 40px;
+  background: linear-gradient(135deg, var(--teal), var(--mint));
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(2,128,144,.4);
+}
+
+.fm-logo svg { width: 22px; height: 22px; }
+
+.fm-brand { flex: 1; }
+.fm-brand-name {
+  font-size: 15px; font-weight: 600;
+  color: var(--white); letter-spacing: -.2px;
+}
+.fm-brand-sub {
+  font-size: 11px; color: rgba(255,255,255,.55);
+  font-weight: 400; margin-top: 1px;
+}
+
+.fm-close {
+  background: rgba(255,255,255,0.1);
+  border: none;
+  color: white;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+.fm-close:hover { background: rgba(255,255,255,0.2); }
+
+.fm-status {
+  display: flex; align-items: center; gap: 5px;
+  background: rgba(29,185,84,.15);
+  border: 1px solid rgba(29,185,84,.25);
+  border-radius: 99px; padding: 3px 10px;
+}
+.fm-status-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--green);
+  animation: pulse 2s infinite;
+}
+.fm-status-text { font-size: 11px; color: var(--green); font-weight: 500; }
+
+@keyframes pulse {
+  0%,100% { opacity: 1; transform: scale(1); }
+  50% { opacity: .6; transform: scale(.85); }
+}
+
+/* ─── CATEGORY CHIPS ────────────────────────────────────────── */
+.fm-cats {
+  display: flex; gap: 6px; flex-wrap: nowrap; overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+.fm-cats::-webkit-scrollbar { display: none; }
+
+.fm-cat {
+  flex-shrink: 0;
+  display: flex; align-items: center; gap: 5px;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 99px; padding: 4px 11px;
+  font-size: 11px; color: rgba(255,255,255,0.75);
+  cursor: pointer; transition: all .15s; white-space: nowrap;
+  font-family: 'DM Sans', sans-serif;
+}
+.fm-cat:hover, .fm-cat.active {
+  background: var(--teal); border-color: var(--teal);
+  color: var(--white);
+}
+.fm-cat span { font-size: 13px; }
+
+/* ─── CHAT AREA ──────────────────────────────────────────────── */
+.fm-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 18px 18px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  scroll-behavior: smooth;
+  background: var(--white);
+}
+.fm-messages::-webkit-scrollbar { width: 4px; }
+.fm-messages::-webkit-scrollbar-thumb {
+  background: var(--border2); border-radius: 99px;
+}
+
+/* ─── MESSAGE BUBBLES ────────────────────────────────────────── */
+.fm-msg { display: flex; gap: 8px; align-items: flex-end; }
+.fm-msg.bot { align-self: flex-start; max-width: 90%; }
+.fm-msg.user { align-self: flex-end; flex-direction: row-reverse; max-width: 85%; }
+
+.fm-avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--teal), var(--mint));
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  font-size: 11px; font-weight: 600; color: var(--white);
+  box-shadow: 0 2px 8px rgba(2,128,144,0.3);
+}
+
+.fm-bubble {
+  padding: 10px 14px;
+  font-size: 13px; line-height: 1.6;
+  color: var(--text);
+  position: relative;
+  word-wrap: break-word;
+}
+
+.fm-msg.bot .fm-bubble {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px 18px 18px 18px;
+  box-shadow: var(--shadow-sm);
+}
+
+.fm-msg.user .fm-bubble {
+  background: linear-gradient(135deg, var(--navy), #1a3a6e);
+  color: var(--white);
+  border-radius: 18px 4px 18px 18px;
+  box-shadow: 0 4px 12px rgba(10,31,68,0.2);
+}
+
+/* ─── OPTION CARDS ───────────────────────────────────────────── */
+.fm-options {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  margin-top: 8px;
+}
+
+.fm-opt {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: var(--white);
+  border: 1.5px solid var(--border2);
+  border-radius: 99px; padding: 5px 13px;
+  font-size: 12px; font-weight: 500; color: var(--text);
+  cursor: pointer; transition: all .15s;
+  font-family: 'DM Sans', sans-serif;
+  white-space: nowrap;
+}
+.fm-opt:hover {
+  border-color: var(--teal); color: var(--teal);
+  background: var(--mint-soft);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(2,128,144,0.15);
+}
+.fm-opt.selected {
+  background: var(--teal); border-color: var(--teal);
+  color: var(--white);
+}
+
+/* ─── TYPING INDICATOR ───────────────────────────────────────── */
+.fm-typing {
+  display: flex; gap: 4px; align-items: center;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px 18px 18px 18px;
+}
+.fm-typing-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--muted);
+  animation: tdot 1.4s infinite ease-in-out;
+}
+.fm-typing-dot:nth-child(2) { animation-delay: .2s; }
+.fm-typing-dot:nth-child(3) { animation-delay: .4s; }
+@keyframes tdot {
+  0%,60%,100% { transform: translateY(0); opacity: .4; }
+  30% { transform: translateY(-6px); opacity: 1; }
+}
+
+/* ─── QUICK REPLY STRIP ──────────────────────────────────────── */
+.fm-quick {
+  padding: 6px 18px 8px;
+  display: flex; gap: 6px; overflow-x: auto;
+  border-top: 1px solid var(--border);
+  background: var(--white);
+  scrollbar-width: none;
+  flex-shrink: 0;
+}
+.fm-quick::-webkit-scrollbar { display: none; }
+.fm-quick:empty { display: none; }
+
+.fm-qbtn {
+  flex-shrink: 0;
+  font-size: 12px; font-weight: 500;
+  padding: 5px 13px; border-radius: 99px;
+  border: 1.5px solid var(--border2);
+  color: var(--muted); background: none;
+  cursor: pointer; transition: all .12s;
+  font-family: 'DM Sans', sans-serif;
+  white-space: nowrap;
+}
+.fm-qbtn:hover {
+  border-color: var(--navy); color: var(--navy);
+}
+
+/* ─── INPUT BAR ──────────────────────────────────────────────── */
+.fm-inputbar {
+  padding: 10px 14px 14px;
+  background: var(--white);
+  border-top: 1px solid var(--border);
+  display: flex; gap: 8px; align-items: flex-end;
+  flex-shrink: 0;
+}
+
+.fm-input {
+  flex: 1;
+  border: 1.5px solid var(--border2);
+  border-radius: 20px;
+  padding: 9px 15px;
+  font-size: 13px; font-family: 'DM Sans', sans-serif;
+  color: var(--text); background: var(--surface);
+  outline: none; resize: none; line-height: 1.4;
+  max-height: 80px; transition: border-color .15s;
+}
+.fm-input:focus { border-color: var(--teal); background: var(--white); }
+.fm-input::placeholder { color: var(--muted); }
+
+.fm-send {
+  width: 38px; height: 38px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--teal), var(--mint));
+  border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(2,128,144,0.35);
+  transition: transform .15s, box-shadow .15s;
+}
+.fm-send:hover { transform: scale(1.08); box-shadow: 0 6px 16px rgba(2,128,144,0.45); }
+.fm-send:disabled { opacity: .4; transform: none; cursor: default; }
+.fm-send svg { width: 16px; height: 16px; fill: var(--white); }
+
+/* ─── FOOTER BRANDING ───────────────────────────────────────── */
+.fm-footer {
+  padding: 8px 18px 10px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  flex-shrink: 0;
+}
+.fm-footer-brand {
+  font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 5px;
+}
+.fm-footer-brand strong { color: var(--teal); font-weight: 600; }
+.fm-wa-badge {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; color: #25D366; font-weight: 500;
+}
+.fm-wa-badge svg { width: 14px; height: 14px; fill: #25D366; }
+
+/* ─── CHANNELS ──────────────────────────────────────────────── */
+.fm-channels {
+  display: flex; gap: 8px; padding: 10px 18px 0;
+  background: var(--white);
+  flex-shrink: 0;
+}
+.fm-channel {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; color: var(--muted);
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 99px; padding: 3px 10px;
+}
+.fm-channel svg { width: 12px; height: 12px; }
+.fm-channel.wa { color: #25D366; border-color: rgba(37,211,102,0.25); background: rgba(37,211,102,0.06); }
+.fm-channel.tg { color: #229ED9; border-color: rgba(34,158,217,0.25); background: rgba(34,158,217,0.06); }
+.fm-channel.web { color: var(--teal); border-color: var(--teal-glow); background: var(--mint-soft); }
+
+/* ─── LAUNCHER BUTTON (floating) ────────────────────────────── */
+.fm-launcher {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 56px; height: 56px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--navy), var(--teal));
+  border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 20px rgba(10,31,68,0.3), 0 0 0 0 rgba(2,128,144,0.4);
+  animation: launcherpulse 3s infinite;
+  z-index: 10000;
+}
+@keyframes launcherpulse {
+  0%,100% { box-shadow: 0 4px 20px rgba(10,31,68,0.3), 0 0 0 0 rgba(2,128,144,0.4); }
+  50% { box-shadow: 0 4px 20px rgba(10,31,68,0.3), 0 0 0 10px rgba(2,128,144,0); }
+}
+.fm-launcher svg { width: 26px; height: 26px; fill: var(--white); transition: transform 0.3s; }
+.fm-launcher.active svg { transform: rotate(90deg); }
+.fm-notif-dot {
+  position: absolute; top: 2px; right: 2px;
+  width: 12px; height: 12px; border-radius: 50%;
+  background: var(--red); border: 2px solid var(--white);
+}
+
+/* ─── ANIMATIONS ─────────────────────────────────────────────── */
+@keyframes msgIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fm-msg { animation: msgIn 0.25s ease; }
+
+@media (max-width: 480px) {
+  .fm-widget-container {
+    right: 0; bottom: 0; width: 100%; max-width: 100%; max-height: 100%;
+  }
+  .fm-widget {
+    height: 100vh; border-radius: 0;
+  }
+  .fm-launcher {
+    bottom: 16px; right: 16px;
+  }
+}
+
+</style>
+</head>
+<body>
+
+<!-- Launcher button -->
+<button class="fm-launcher" id="fm-launcher" onclick="toggleWidget()">
+  <svg viewBox="0 0 24 24" id="launcher-icon"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+  <svg viewBox="0 0 24 24" id="close-icon" style="display:none; width:24px; height:24px; fill:white;"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+  <div class="fm-notif-dot" id="fm-notif-dot"></div>
+</button>
+
+<div class="fm-widget-container" id="fm-widget-container">
+  <div class="fm-widget">
+
+    <!-- Header -->
+    <div class="fm-header">
+      <div class="fm-header-top">
+        <div class="fm-logo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+          </svg>
+        </div>
+        <div class="fm-brand">
+          <div class="fm-brand-name">FM Assist</div>
+          <div class="fm-brand-sub">Facilities Management · FMCG</div>
+        </div>
+        <div class="fm-status">
+          <div class="fm-status-dot"></div>
+          <span class="fm-status-text">Online</span>
+        </div>
+      </div>
+
+      <!-- Category chips -->
+      <div class="fm-cats">
+        <button class="fm-cat" onclick="quickSend('Log a fault')"><span>🔧</span> Log fault</button>
+        <button class="fm-cat" onclick="quickSend('Show fault categories')"><span>📋</span> Categories</button>
+        <button class="fm-cat" onclick="quickSend('What are the SLAs?')"><span>⏱️</span> SLAs</button>
+        <button class="fm-cat" onclick="quickSend('Refrigeration checklist')"><span>❄️</span> Refrigeration</button>
+        <button class="fm-cat" onclick="quickSend('Electrical checklist')"><span>⚡</span> Electrical</button>
+        <button class="fm-cat" onclick="quickSend('Check my ticket status')"><span>🎫</span> My tickets</button>
+      </div>
+    </div>
+
+    <!-- Channel badges -->
+    <div class="fm-channels">
+      <div class="fm-channel wa">
+        <svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12.05 2C6.495 2 2.05 6.447 2.05 12.001c0 1.755.461 3.399 1.265 4.832L2 22l5.31-1.293A9.945 9.945 0 0012.05 22c5.555 0 10-4.447 10-9.999C22.05 6.447 17.605 2 12.05 2zm0 18.165a8.155 8.155 0 01-4.178-1.146l-.299-.179-3.103.756.787-2.988-.196-.308A8.093 8.093 0 013.886 12c0-4.51 3.662-8.165 8.164-8.165 4.503 0 8.164 3.655 8.164 8.165 0 4.51-3.661 8.165-8.164 8.165z"/></svg>
+        WhatsApp
+      </div>
+      <div class="fm-channel web">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        Web widget
+      </div>
+    </div>
+
+    <!-- Messages -->
+    <div class="fm-messages" id="fm-messages"></div>
+
+    <!-- Quick reply strip -->
+    <div class="fm-quick" id="fm-quick"></div>
+
+    <!-- Input -->
+    <div class="fm-inputbar">
+      <textarea class="fm-input" id="fm-input"
+        rows="1"
+        placeholder="Type a message or choose an option…"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();fmSend()}"
+        oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
+      <button class="fm-send" id="fm-send-btn" onclick="fmSend()">
+        <svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg>
+      </button>
+    </div>
+
+    <!-- Footer -->
+    <div class="fm-footer">
+      <div class="fm-footer-brand">
+        Powered by <strong>FM Assist</strong> · AI knowledge base
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Configuration ─────────────────────────────────────────────────────
+const BACKEND_URL = '/api/chat';
+const WIDGET_SECRET = 'YOUR_WIDGET_SECRET'; // Should be replaced by user or environment
+
+// ── Session ────────────────────────────────────────────────────────────
+const SESSION_ID = 'web_' + Math.random().toString(36).slice(2, 9);
+let isBusy = false;
+
+function toggleWidget() {
+  const container = document.getElementById('fm-widget-container');
+  const launcher = document.getElementById('fm-launcher');
+  const lIcon = document.getElementById('launcher-icon');
+  const cIcon = document.getElementById('close-icon');
+  const dot = document.getElementById('fm-notif-dot');
+
+  container.classList.toggle('active');
+  launcher.classList.toggle('active');
+
+  if (container.classList.contains('active')) {
+    lIcon.style.display = 'none';
+    cIcon.style.display = 'block';
+    dot.style.display = 'none';
+    document.getElementById('fm-input').focus();
+  } else {
+    lIcon.style.display = 'block';
+    cIcon.style.display = 'none';
+  }
+}
+
+// ── Add message to UI ──────────────────────────────────────────────────
+function addMsg(text, type, options = []) {
+  const msgs = document.getElementById('fm-messages');
+
+  const wrap = document.createElement('div');
+  wrap.className = 'fm-msg ' + type;
+
+  if (type === 'bot') {
+    const av = document.createElement('div');
+    av.className = 'fm-avatar';
+    av.textContent = 'FM';
+    wrap.appendChild(av);
+  }
+
+  const bubble = document.createElement('div');
+  bubble.className = 'fm-bubble';
+
+  // Format text — bold *text*, line breaks
+  const formatted = text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<strong>$1</strong>')
+    .replace(/━+[^━]*━+/g, m => `<div style="font-family:'DM Mono',monospace;font-size:11px;line-height:1.8;background:rgba(2,128,144,0.06);border-radius:8px;padding:8px 10px;margin-top:4px;border:1px solid rgba(2,128,144,0.15)">${m.replace(/\n/g,'<br>')}</div>`)
+    .replace(/\n/g, '<br>');
+
+  bubble.innerHTML = formatted;
+
+  // Options inside bubble
+  if (options.length > 0) {
+    const optRow = document.createElement('div');
+    optRow.className = 'fm-options';
+    options.forEach(opt => {
+      const btn = document.createElement('button');
+      btn.className = 'fm-opt';
+      btn.textContent = opt;
+      btn.onclick = () => {
+        optRow.querySelectorAll('.fm-opt').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        setTimeout(() => quickSend(opt), 200);
+      };
+      optRow.appendChild(btn);
+    });
+    bubble.appendChild(optRow);
+  }
+
+  wrap.appendChild(bubble);
+  msgs.appendChild(wrap);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+// ── Typing indicator ───────────────────────────────────────────────────
+function showTyping() {
+  const msgs = document.getElementById('fm-messages');
+  const wrap = document.createElement('div');
+  wrap.className = 'fm-msg bot'; wrap.id = 'fm-typing';
+  const av = document.createElement('div');
+  av.className = 'fm-avatar'; av.textContent = 'FM';
+  const t = document.createElement('div');
+  t.className = 'fm-typing';
+  [0,1,2].forEach(i => {
+    const d = document.createElement('div');
+    d.className = 'fm-typing-dot';
+    t.appendChild(d);
+  });
+  wrap.appendChild(av); wrap.appendChild(t);
+  msgs.appendChild(wrap);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+function hideTyping() { document.getElementById('fm-typing')?.remove(); }
+
+// ── Quick reply suggestions ────────────────────────────────────────────
+function setQuick(suggestions) {
+  const strip = document.getElementById('fm-quick');
+  strip.innerHTML = '';
+  suggestions.forEach(s => {
+    const btn = document.createElement('button');
+    btn.className = 'fm-qbtn';
+    btn.textContent = s;
+    btn.onclick = () => quickSend(s);
+    strip.appendChild(btn);
+  });
+}
+
+function getQuickSuggestions(reply) {
+  const r = reply.toLowerCase();
+  if (r.includes('branch') || r.includes('store name')) return [];
+  if (r.includes('category') || r.includes('equipment category'))
+    return ['Refrigeration','Electrical','Bakery','Butchery','Plumbing','Trolleys'];
+  if (r.includes('priority') || r.includes('how urgent'))
+    return ['Emergency','Urgent','High','Routine'];
+  if (r.includes('yes') && r.includes('no') && r.includes('confirm'))
+    return ['YES — submit','NO — change something'];
+  if (r.includes('anything else') || r.includes('another fault'))
+    return ['Log another fault','Show SLAs','Ask a question'];
+  return [];
+}
+
+// ── Call AI Backend ───────────────────────────────────────────────────
+async function callBackend(message) {
+  const response = await fetch(BACKEND_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-fm-secret': WIDGET_SECRET
+    },
+    body: JSON.stringify({
+      sessionId: SESSION_ID,
+      message: message
+    })
+  });
+
+  if (!response.ok) throw new Error('API error ' + response.status);
+  const data = await response.json();
+  return data.reply;
+}
+
+// ── Send message ───────────────────────────────────────────────────────
+async function fmSend() {
+  const input = document.getElementById('fm-input');
+  const text = input.value.trim();
+  if (!text || isBusy) return;
+
+  input.value = ''; input.style.height = 'auto';
+  setQuick([]);
+  addMsg(text, 'user');
+
+  isBusy = true;
+  document.getElementById('fm-send-btn').disabled = true;
+  showTyping();
+
+  try {
+    const reply = await callBackend(text);
+    hideTyping();
+    // Extract quick-select options from numbered lists in reply
+    const optionMatches = [...reply.matchAll(/^\s*(\d+)\.\s+(.+)$/gm)];
+    const opts = optionMatches.length >= 2 && optionMatches.length <= 8
+      ? optionMatches.map(m => m[2].split('—')[0].split('→')[0].trim().substring(0, 40))
+      : [];
+    addMsg(reply, 'bot', opts);
+    setQuick(getQuickSuggestions(reply));
+  } catch (e) {
+    hideTyping();
+    addMsg('Connection error. Please check your configuration and try again.', 'bot');
+  }
+
+  isBusy = false;
+  document.getElementById('fm-send-btn').disabled = false;
+  document.getElementById('fm-input').focus();
+}
+
+window.quickSend = function(text) {
+  document.getElementById('fm-input').value = text;
+  fmSend();
+};
+
+// ── Initial Greeting ───────────────────────────────────────────────────
+setTimeout(() => {
+  addMsg(`**Good day! I'm FM Assist** — your facilities management fault-reporting assistant.
+
+I'm trained on your complete fault-finding knowledge base covering **22 equipment categories** across all store departments.
+
+What would you like to do?`, 'bot');
+
+  setQuick(['Log a fault', 'Show fault categories', 'What are the SLAs?', 'Refrigeration checklist']);
+}, 1000);
+</script>
+
+</body>
+</html>
