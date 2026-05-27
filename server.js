@@ -42,18 +42,19 @@ function getSession(userId) {
 }
 
 function getLocalFlowResponse(session, userMessage) {
-    if (session.isComplete) return null; // Let AI handle post-completion if needed
+    if (session.isComplete) return null;
 
     const phases = FAULT_FLOW.phases;
     
-    // Initial greeting / start of flow
+    // Initial greeting
     if (session.phaseIndex === 0 && session.questionIndex === 0 && Object.keys(session.data).length === 0) {
-        if (!userMessage || userMessage.toLowerCase().match(/hi|hello|start|hey/)) {
+        const text = userMessage ? userMessage.toLowerCase() : "";
+        if (text.match(/hi|hello|start|hey|help/)) {
             return phases[0].questions[0].text;
         }
     }
 
-    // Save the answer to the CURRENT question
+    // Save answer and move forward
     const currentPhase = phases[session.phaseIndex];
     const currentQuestion = currentPhase.questions[session.questionIndex];
     
@@ -62,13 +63,11 @@ function getLocalFlowResponse(session, userMessage) {
         session.questionIndex++;
     }
 
-    // Move to next phase if current phase is done
     if (session.questionIndex >= currentPhase.questions.length) {
         session.phaseIndex++;
         session.questionIndex = 0;
     }
 
-    // Check if we finished all phases
     if (session.phaseIndex >= phases.length) {
         session.isComplete = true;
         const report = generateReport(session.data);
@@ -76,7 +75,6 @@ function getLocalFlowResponse(session, userMessage) {
         return report + "\n\n✅ Your report has been logged and the technician has been notified.";
     }
 
-    // Return the NEXT question
     return phases[session.phaseIndex].questions[session.questionIndex].text;
 }
 
@@ -95,37 +93,34 @@ function generateReport(data) {
 }
 
 async function handleCompletedReport(session, reportText) {
-    const lines = reportText.split('\n');
-    const data = {
-        ticketId: reportText.match(/#([A-Z0-9-]+)/)?.[1] || 'UNKNOWN',
-        store: session.data.store,
-        reporter: session.data.reporter,
-        category: session.data.category,
-        location: session.data.location,
-        equipment: session.data.equipment_details,
-        powerStatus: session.data.power_status,
-        failureMode: session.data.failure_mode,
-        priority: session.data.priority,
-        history: session.history,
-        technicianNeeded: 'Yes'
-    };
-    await sendFaultNotification(data, session.media);
+    try {
+        const data = {
+            ticketId: reportText.match(/#([A-Z0-9-]+)/)?.[1] || 'UNKNOWN',
+            store: session.data.store,
+            reporter: session.data.reporter,
+            category: session.data.category,
+            location: session.data.location,
+            equipment: session.data.equipment_details,
+            powerStatus: session.data.power_status,
+            failureMode: session.data.failure_mode,
+            priority: session.data.priority,
+            history: session.history,
+            technicianNeeded: 'Yes'
+        };
+        await sendFaultNotification(data, session.media);
+    } catch (e) { console.error("Notification Error:", e); }
 }
 
 async function getAIResponse(userId, userMessage) {
     const session = getSession(userId);
     
-    // 1. Try deterministic flow first (Default)
     const flowReply = getLocalFlowResponse(session, userMessage);
     if (flowReply) {
         session.history.push({ role: 'assistant', content: flowReply });
         return flowReply;
     }
 
-    // 2. Fallback to AI for general questions or after flow completion
-    if (!anthropic) {
-        return "The fault reporting flow is complete. For further assistance, please contact management.";
-    }
+    if (!anthropic) return "Report complete. Thank you.";
 
     try {
         session.history.push({ role: 'user', content: userMessage });
@@ -139,13 +134,12 @@ async function getAIResponse(userId, userMessage) {
         session.history.push({ role: 'assistant', content: aiReply });
         return aiReply;
     } catch (error) {
-        console.error('Claude AI Error:', error.message);
-        return "I'm having trouble with my advanced logic, but I've recorded your details. Is there anything else specific to this fault?";
+        return "I encountered an error, but your report progress is saved. Please continue providing details.";
     }
 }
 
 // ==========================================
-// WEBHOOKS & ROUTES
+// ROUTES
 // ==========================================
 
 app.get('/api/webhook/whatsapp', (req, res) => {
@@ -167,19 +161,15 @@ app.post('/api/webhook/whatsapp', async (req, res) => {
         if (text) {
             const reply = await getAIResponse(`wa-${from}`, text);
             await axios.post(`https://graph.facebook.com/v17.0/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`, {
-                messaging_product: 'whatsapp',
-                to: from,
-                type: 'text',
-                text: { body: reply }
-            }, {
-                headers: { Authorization: `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}` }
-            });
+                messaging_product: 'whatsapp', to: from, type: 'text', text: { body: reply }
+            }, { headers: { Authorization: `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}` } }).catch(e => console.error("WA Send Error", e.message));
         }
     }
     res.sendStatus(200);
 });
 
-if (process.env.TELEGRAM_BOT_TOKEN) {
+// Disable polling in production for Vercel
+if (process.env.TELEGRAM_BOT_TOKEN && process.env.NODE_ENV !== 'production') {
     const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: true });
     bot.on('message', async (msg) => {
         if (msg.text) {
@@ -198,7 +188,10 @@ app.post('/api/chat', async (req, res) => {
     res.json({ reply });
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// Export for Vercel, but also listen for local dev
+if (process.env.NODE_ENV !== 'production') {
+    const PORT = process.env.PORT || 3000;
+    app.listen(PORT, () => console.log(`Local server on ${PORT}`));
+}
 
 module.exports = app;
