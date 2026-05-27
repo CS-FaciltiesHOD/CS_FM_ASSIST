@@ -49,7 +49,7 @@ async function getAIResponse(userId, userMessage) {
 
     try {
         const response = await anthropic.messages.create({
-            model: 'claude-3-5-sonnet-latest',
+            model: 'claude-3-5-sonnet-20241022',
             max_tokens: 1024,
             system: SYSTEM_PROMPT,
             messages: session.history,
