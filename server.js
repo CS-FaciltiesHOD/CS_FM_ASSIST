@@ -307,7 +307,8 @@ app.get('/widget', (req, res) => {
 });
 
 app.post('/api/chat', async (req, res) => {
-    if (req.headers['x-fm-secret'] !== process.env.CHAT_WIDGET_SECRET) {
+    const secret = process.env.CHAT_WIDGET_SECRET || 'FM_ASSIST_SECRET';
+    if (req.headers['x-fm-secret'] !== secret) {
         return res.status(403).json({ error: 'Unauthorized' });
     }
     const { sessionId, message } = req.body;
