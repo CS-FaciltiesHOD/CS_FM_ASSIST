@@ -3,6 +3,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
+const path = require('path');
 const Anthropic = require('@anthropic-ai/sdk');
 const TelegramBot = require('node-telegram-bot-api');
 const { SYSTEM_PROMPT } = require('./knowledge-base');
@@ -297,6 +298,14 @@ if (process.env.TELEGRAM_BOT_TOKEN) {
 // ==========================================
 // WEBSITE CHAT API
 // ==========================================
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+app.get('/widget', (req, res) => {
+    res.sendFile(path.join(__dirname, 'v2-widget.html'));
+});
+
 app.post('/api/chat', async (req, res) => {
     if (req.headers['x-fm-secret'] !== process.env.CHAT_WIDGET_SECRET) {
         return res.status(403).json({ error: 'Unauthorized' });
