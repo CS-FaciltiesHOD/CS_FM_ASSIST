@@ -1,7 +1,7 @@
 (function() {
     // FM Assist Widget Loader
     const CONFIG = {
-        baseUrl: 'https://cs-fm-assist.vercel.app',
+        baseUrl: '',
         width: '420px',
         height: '650px',
         margin: '24px'
