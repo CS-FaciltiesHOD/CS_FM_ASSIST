@@ -8,6 +8,7 @@ const Anthropic = require('@anthropic-ai/sdk');
 const TelegramBot = require('node-telegram-bot-api');
 const { SYSTEM_PROMPT } = require('./knowledge-base');
 const { sendFaultNotification } = require('./notify');
+const { getLogicResponse } = require('./logic-engine');
 
 const app = express();
 app.use(cors({
@@ -17,14 +18,20 @@ app.use(cors({
 }));
 app.use(express.json());
 
-let anthropic;
-if (process.env.ANTHROPIC_API_KEY) {
+// =========================================================================
+// ANTHROPIC AI ENGINE (DISABLED - MARKED FOR FUTURE ACTIVATION)
+// =========================================================================
+let anthropic = null;
+const USE_AI_ENGINE = false; // Set to true to re-activate Anthropic Claude
+
+if (USE_AI_ENGINE && process.env.ANTHROPIC_API_KEY) {
     anthropic = new Anthropic({
         apiKey: process.env.ANTHROPIC_API_KEY,
     });
 } else {
-    console.warn('WARNING: ANTHROPIC_API_KEY is missing. AI features will be disabled.');
+    console.log('FM Assist: Running in Deterministic Mode (Logic Engine). AI Engine is inactive.');
 }
+// =========================================================================
 
 const sessions = {};
 
@@ -40,8 +47,25 @@ function getSession(userId) {
     return sessions[userId];
 }
 
+/**
+ * AI RESPONSE HANDLER (DISABLED)
+ * This function is kept for future re-activation of the Anthropic Engine.
+ */
 async function getAIResponse(userId, userMessage) {
     const session = getSession(userId);
+
+    if (!USE_AI_ENGINE) {
+        session.history.push({ role: 'user', content: userMessage });
+        const reply = await getLogicResponse(userId, userMessage, session);
+        session.history.push({ role: 'assistant', content: reply });
+
+        if (reply && reply.includes('━━━ FM FAULT REPORT #')) {
+             handleCompletedReport(userId, reply);
+             session.history = []; // Reset history after completion in deterministic mode
+        }
+        return reply;
+    }
+
     session.history.push({ role: 'user', content: userMessage });
 
     if (!anthropic) {
