@@ -45,7 +45,7 @@ async function getAIResponse(userId, userMessage) {
     session.history.push({ role: 'user', content: userMessage });
 
     if (!anthropic) {
-        return "I'm currently in 'offline mode' because my API key is not configured. Please contact the administrator.";
+        return "The FM Assist AI engine is currently offline (Configuration Required). Please contact your administrator.";
     }
 
     try {
@@ -65,8 +65,11 @@ async function getAIResponse(userId, userMessage) {
 
         return aiReply;
     } catch (error) {
-        console.error('Claude AI Error:', error);
-        return "I'm sorry, I'm having trouble connecting to my brain right now. Please try again in a moment.";
+        if (error.message && error.message.toLowerCase().includes('credit balance')) {
+            return "The FM Assist AI engine has run out of credits. Please top up the account at console.anthropic.com to resume service.";
+        }
+        console.error('AI Engine Error:', error);
+        return "I'm sorry, I'm having trouble processing your request right now. Please try again in a moment.";
     }
 }
 
