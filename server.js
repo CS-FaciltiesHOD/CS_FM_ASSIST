@@ -11,7 +11,7 @@ const { sendFaultNotification } = require('./notify');
 
 const app = express();
 app.use(cors({
-    origin: ['https://www.southafricassoul.co.za', 'https://southafricassoul.co.za'],
+    origin: '*',
     methods: ['GET', 'POST'],
     allowedHeaders: ['Content-Type', 'x-fm-secret']
 }));
