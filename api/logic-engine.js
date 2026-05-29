@@ -480,6 +480,12 @@ async function getLogicResponse(userId, userMessage, session) {
 
     const result = handleInput(session, userMessage);
 
+    if (userMessage.toLowerCase() === 'log a fault') {
+        session.state = { phase: PHASES.IDENTIFICATION, step: 1 };
+        session.data = {};
+        return getNextQuestion(session);
+    }
+
     if (result === "SUCCESS") {
         const report = generateReport(session);
         session.state = { phase: PHASES.COMPLETED };

@@ -61,11 +61,33 @@ module.exports = async (req, res) => {
     const { sessionId, message } = req.body;
     if (!sessionId || !message) return res.status(400).json({ error: 'Missing' });
 
+    // AI MODE TOGGLE (Set to true to use Anthropic instead of Logic Engine)
+    const USE_AI_BRAIN = false;
+
     const session = getSession(`web-${sessionId}`);
     session.history.push({ role: 'user', content: message });
 
     try {
-        const reply = await getLogicResponse(`web-${sessionId}`, message, session);
+        let reply;
+
+        if (USE_AI_BRAIN) {
+            /*
+               --- ANTHROPIC AI PATH (Rendered invalid but preserved for future activation) ---
+               const Anthropic = require('@anthropic-ai/sdk');
+               const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+               const response = await anthropic.messages.create({
+                   model: 'claude-3-5-sonnet-20240620',
+                   max_tokens: 1024,
+                   system: require('./knowledge-base.js').SYSTEM_PROMPT,
+                   messages: session.history
+               });
+               reply = response.content[0].text;
+            */
+            reply = "AI Brain is currently disabled. Please use the Logic Engine.";
+        } else {
+            reply = await getLogicResponse(`web-${sessionId}`, message, session);
+        }
+
         session.history.push({ role: 'assistant', content: reply });
 
         if (reply.includes('━━━ FM FAULT REPORT #')) {
