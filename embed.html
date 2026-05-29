@@ -44,42 +44,19 @@ body {
   font-family: 'DM Sans', sans-serif;
   background: var(--surface);
   min-height: 100vh;
-}
-
-/* ─── WIDGET CONTAINER (Floating) ─────────────────────── */
-.fm-widget-container {
-  position: fixed;
-  bottom: 90px;
-  right: 24px;
-  width: 400px;
-  max-width: calc(100vw - 48px);
-  max-height: calc(100vh - 120px);
-  z-index: 9999;
-  display: none; /* Hidden by default */
-  flex-direction: column;
-  animation: widgetIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  transform-origin: bottom right;
-}
-
-@keyframes widgetIn {
-  from { opacity: 0; transform: scale(0.9) translateY(20px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
-}
-
-.fm-widget-container.active {
   display: flex;
+  flex-direction: column;
 }
 
+/* ─── WIDGET UI ─────────────────────── */
 .fm-widget {
   background: var(--white);
-  border-radius: var(--r-xl);
-  box-shadow: var(--shadow-lg);
-  overflow: hidden;
-  border: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  height: 600px;
-  max-height: 100%;
+  height: 100vh;
+  width: 100%;
+  overflow: hidden;
+  position: relative;
 }
 
 /* ─── HEADER ─────────────────────────────────────────────────── */
@@ -137,21 +114,6 @@ body {
   font-weight: 400; margin-top: 1px;
 }
 
-.fm-close {
-  background: rgba(255,255,255,0.1);
-  border: none;
-  color: white;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.2s;
-}
-.fm-close:hover { background: rgba(255,255,255,0.2); }
-
 .fm-status {
   display: flex; align-items: center; gap: 5px;
   background: rgba(29,185,84,.15);
@@ -170,7 +132,7 @@ body {
   50% { opacity: .6; transform: scale(.85); }
 }
 
-/* ─── CATEGORY CHIPS ────────────────────────────────────────── */
+/* ─── CATEGORY CHIPS ──────── */
 .fm-cats {
   display: flex; gap: 6px; flex-wrap: nowrap; overflow-x: auto;
   padding-bottom: 2px;
@@ -181,10 +143,10 @@ body {
 .fm-cat {
   flex-shrink: 0;
   display: flex; align-items: center; gap: 5px;
-  background: rgba(255,255,255,0.1);
-  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.15);
   border-radius: 99px; padding: 4px 11px;
-  font-size: 11px; color: rgba(255,255,255,0.75);
+  font-size: 11px; color: rgba(255,255,255,.75);
   cursor: pointer; transition: all .15s; white-space: nowrap;
   font-family: 'DM Sans', sans-serif;
 }
@@ -210,7 +172,7 @@ body {
   background: var(--border2); border-radius: 99px;
 }
 
-/* ─── MESSAGE BUBBLES ────────────────────────────────────────── */
+/* ─── MESSAGE BUBBLES ────────── */
 .fm-msg { display: flex; gap: 8px; align-items: flex-end; }
 .fm-msg.bot { align-self: flex-start; max-width: 90%; }
 .fm-msg.user { align-self: flex-end; flex-direction: row-reverse; max-width: 85%; }
@@ -221,7 +183,7 @@ body {
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
   font-size: 11px; font-weight: 600; color: var(--white);
-  box-shadow: 0 2px 8px rgba(2,128,144,0.3);
+  box-shadow: 0 2px 8px rgba(2,128,144,.3);
 }
 
 .fm-bubble {
@@ -243,10 +205,10 @@ body {
   background: linear-gradient(135deg, var(--navy), #1a3a6e);
   color: var(--white);
   border-radius: 18px 4px 18px 18px;
-  box-shadow: 0 4px 12px rgba(10,31,68,0.2);
+  box-shadow: 0 4px 12px rgba(10,31,68,.2);
 }
 
-/* ─── OPTION CARDS ───────────────────────────────────────────── */
+/* ─── OPTION CARDS ───── */
 .fm-options {
   display: flex; flex-wrap: wrap; gap: 6px;
   margin-top: 8px;
@@ -266,7 +228,7 @@ body {
   border-color: var(--teal); color: var(--teal);
   background: var(--mint-soft);
   transform: translateY(-1px);
-  box-shadow: 0 3px 10px rgba(2,128,144,0.15);
+  box-shadow: 0 3px 10px rgba(2,128,144,.15);
 }
 .fm-opt.selected {
   background: var(--teal); border-color: var(--teal);
@@ -347,14 +309,14 @@ body {
   border: none; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 4px 12px rgba(2,128,144,0.35);
+  box-shadow: 0 4px 12px rgba(2,128,144,.35);
   transition: transform .15s, box-shadow .15s;
 }
-.fm-send:hover { transform: scale(1.08); box-shadow: 0 6px 16px rgba(2,128,144,0.45); }
+.fm-send:hover { transform: scale(1.08); box-shadow: 0 6px 16px rgba(2,128,144,.45); }
 .fm-send:disabled { opacity: .4; transform: none; cursor: default; }
 .fm-send svg { width: 16px; height: 16px; fill: var(--white); }
 
-/* ─── FOOTER BRANDING ───────────────────────────────────────── */
+/* ─── FOOTER BRANDING ───────────────────────── */
 .fm-footer {
   padding: 8px 18px 10px;
   background: var(--surface);
@@ -366,13 +328,8 @@ body {
   font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 5px;
 }
 .fm-footer-brand strong { color: var(--teal); font-weight: 600; }
-.fm-wa-badge {
-  display: flex; align-items: center; gap: 5px;
-  font-size: 11px; color: #25D366; font-weight: 500;
-}
-.fm-wa-badge svg { width: 14px; height: 14px; fill: #25D366; }
 
-/* ─── CHANNELS ──────────────────────────────────────────────── */
+/* ─── CHANNEL BADGE STRIP ────────────────────────────────────── */
 .fm-channels {
   display: flex; gap: 8px; padding: 10px 18px 0;
   background: var(--white);
@@ -385,67 +342,23 @@ body {
   border-radius: 99px; padding: 3px 10px;
 }
 .fm-channel svg { width: 12px; height: 12px; }
-.fm-channel.wa { color: #25D366; border-color: rgba(37,211,102,0.25); background: rgba(37,211,102,0.06); }
-.fm-channel.tg { color: #229ED9; border-color: rgba(34,158,217,0.25); background: rgba(34,158,217,0.06); }
+.fm-channel.wa { color: #25D366; border-color: rgba(37,211,102,.25); background: rgba(37,211,102,.06); }
+.fm-channel.tg { color: #229ED9; border-color: rgba(34,158,217,.25); background: rgba(34,158,217,.06); }
 .fm-channel.web { color: var(--teal); border-color: var(--teal-glow); background: var(--mint-soft); }
 
-/* ─── LAUNCHER BUTTON (floating) ────────────────────────────── */
-.fm-launcher {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  width: 56px; height: 56px; border-radius: 50%;
-  background: linear-gradient(135deg, var(--navy), var(--teal));
-  border: none; cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 4px 20px rgba(10,31,68,0.3), 0 0 0 0 rgba(2,128,144,0.4);
-  animation: launcherpulse 3s infinite;
-  z-index: 10000;
-}
-@keyframes launcherpulse {
-  0%,100% { box-shadow: 0 4px 20px rgba(10,31,68,0.3), 0 0 0 0 rgba(2,128,144,0.4); }
-  50% { box-shadow: 0 4px 20px rgba(10,31,68,0.3), 0 0 0 10px rgba(2,128,144,0); }
-}
-.fm-launcher svg { width: 26px; height: 26px; fill: var(--white); transition: transform 0.3s; }
-.fm-launcher.active svg { transform: rotate(90deg); }
-.fm-notif-dot {
-  position: absolute; top: 2px; right: 2px;
-  width: 12px; height: 12px; border-radius: 50%;
-  background: var(--red); border: 2px solid var(--white);
-}
-
-/* ─── ANIMATIONS ─────────────────────────────────────────────── */
+/* ─── MESSAGE ANIMATIONS ─────────────────────────────────────── */
 @keyframes msgIn {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-.fm-msg { animation: msgIn 0.25s ease; }
-
-@media (max-width: 480px) {
-  .fm-widget-container {
-    right: 0; bottom: 0; width: 100%; max-width: 100%; max-height: 100%;
-  }
-  .fm-widget {
-    height: 100vh; border-radius: 0;
-  }
-  .fm-launcher {
-    bottom: 16px; right: 16px;
-  }
-}
+.fm-msg { animation: msgIn .25s ease; }
 
 </style>
 </head>
 <body>
 
-<!-- Launcher button -->
-<button class="fm-launcher" id="fm-launcher" onclick="toggleWidget()">
-  <svg viewBox="0 0 24 24" id="launcher-icon"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
-  <svg viewBox="0 0 24 24" id="close-icon" style="display:none; width:24px; height:24px; fill:white;"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-  <div class="fm-notif-dot" id="fm-notif-dot"></div>
-</button>
-
-<div class="fm-widget-container" id="fm-widget-container">
-  <div class="fm-widget">
+  <!-- ── THE WIDGET ── -->
+  <div class="fm-widget" id="fm-widget">
 
     <!-- Header -->
     <div class="fm-header">
@@ -465,7 +378,7 @@ body {
         </div>
       </div>
 
-      <!-- Category chips -->
+      <!-- Category chips — like Google Reviews star filters -->
       <div class="fm-cats">
         <button class="fm-cat" onclick="quickSend('Log a fault')"><span>🔧</span> Log fault</button>
         <button class="fm-cat" onclick="quickSend('Show fault categories')"><span>📋</span> Categories</button>
@@ -513,37 +426,15 @@ body {
       </div>
     </div>
   </div>
-</div>
 
 <script>
 // ── Configuration ─────────────────────────────────────────────────────
 const BACKEND_URL = '/api/chat';
-const WIDGET_SECRET = 'FM_ASSIST_SECRET'; // Should be replaced by user or environment
+const WIDGET_SECRET = 'FM_ASSIST_SECRET';
 
 // ── Session ────────────────────────────────────────────────────────────
 const SESSION_ID = 'web_' + Math.random().toString(36).slice(2, 9);
 let isBusy = false;
-
-function toggleWidget() {
-  const container = document.getElementById('fm-widget-container');
-  const launcher = document.getElementById('fm-launcher');
-  const lIcon = document.getElementById('launcher-icon');
-  const cIcon = document.getElementById('close-icon');
-  const dot = document.getElementById('fm-notif-dot');
-
-  container.classList.toggle('active');
-  launcher.classList.toggle('active');
-
-  if (container.classList.contains('active')) {
-    lIcon.style.display = 'none';
-    cIcon.style.display = 'block';
-    dot.style.display = 'none';
-    document.getElementById('fm-input').focus();
-  } else {
-    lIcon.style.display = 'block';
-    cIcon.style.display = 'none';
-  }
-}
 
 // ── Add message to UI ──────────────────────────────────────────────────
 function addMsg(text, type, options = []) {
@@ -566,7 +457,7 @@ function addMsg(text, type, options = []) {
   const formatted = text
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.*?)\*/g, '<strong>$1</strong>')
-    .replace(/━+[^━]*━+/g, m => `<div style="font-family:'DM Mono',monospace;font-size:11px;line-height:1.8;background:rgba(2,128,144,0.06);border-radius:8px;padding:8px 10px;margin-top:4px;border:1px solid rgba(2,128,144,0.15)">${m.replace(/\n/g,'<br>')}</div>`)
+    .replace(/━━+[^━]*━+/g, m => `<div style="font-family:'DM Mono',monospace;font-size:11px;line-height:1.8;background:rgba(2,128,144,.06);border-radius:8px;padding:8px 10px;margin-top:4px;border:1px solid rgba(2,128,144,.15)">${m.replace(/\n/g,'<br>')}</div>`)
     .replace(/\n/g, '<br>');
 
   bubble.innerHTML = formatted;
@@ -686,7 +577,7 @@ async function fmSend() {
     setQuick(getQuickSuggestions(reply));
   } catch (e) {
     hideTyping();
-    addMsg('Connection error. Please check your configuration and try again.', 'bot');
+    addMsg('Connection error. Please try again in a moment.', 'bot');
   }
 
   isBusy = false;
@@ -699,7 +590,7 @@ window.quickSend = function(text) {
   fmSend();
 };
 
-// ── Initial Greeting ───────────────────────────────────────────────────
+// ── Boot ───────────────────────────────────────────────────────────────
 setTimeout(() => {
   addMsg(`**Good day! I'm FM Assist** — your facilities management fault-reporting assistant.
 
@@ -708,7 +599,7 @@ I'm trained on your complete fault-finding knowledge base covering **22 equipmen
 What would you like to do?`, 'bot');
 
   setQuick(['Log a fault', 'Show fault categories', 'What are the SLAs?', 'Refrigeration checklist']);
-}, 1000);
+}, 400);
 </script>
 
 </body>
