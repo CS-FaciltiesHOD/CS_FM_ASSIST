@@ -328,6 +328,11 @@ body {
   font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 5px;
 }
 .fm-footer-brand strong { color: var(--teal); font-weight: 600; }
+.fm-wa-badge {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; color: #25D366; font-weight: 500;
+}
+.fm-wa-badge svg { width: 14px; height: 14px; fill: #25D366; }
 
 /* ─── CHANNEL BADGE STRIP ────────────────────────────────────── */
 .fm-channels {
@@ -424,6 +429,10 @@ body {
       <div class="fm-footer-brand">
         Powered by <strong>FM Assist</strong> · AI knowledge base
       </div>
+      <div class="fm-wa-badge">
+        <svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12.05 2C6.495 2 2.05 6.447 2.05 12.001c0 1.755.461 3.399 1.265 4.832L2 22l5.31-1.293A9.945 9.945 0 0012.05 22c5.555 0 10-4.447 10-9.999C22.05 6.447 17.605 2 12.05 2z"/></svg>
+        Also on WhatsApp
+      </div>
     </div>
   </div>
 
@@ -457,7 +466,7 @@ function addMsg(text, type, options = []) {
   const formatted = text
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.*?)\*/g, '<strong>$1</strong>')
-    .replace(/━━+[^━]*━+/g, m => `<div style="font-family:'DM Mono',monospace;font-size:11px;line-height:1.8;background:rgba(2,128,144,.06);border-radius:8px;padding:8px 10px;margin-top:4px;border:1px solid rgba(2,128,144,.15)">${m.replace(/\n/g,'<br>')}</div>`)
+    .replace(/━+[^━]*━+/g, m => `<div style="font-family:'DM Mono',monospace;font-size:11px;line-height:1.8;background:rgba(2,128,144,.06);border-radius:8px;padding:8px 10px;margin-top:4px;border:1px solid rgba(2,128,144,.15)">${m.replace(/\n/g,'<br>')}</div>`)
     .replace(/\n/g, '<br>');
 
   bubble.innerHTML = formatted;
@@ -595,6 +604,11 @@ setTimeout(() => {
   addMsg(`**Good day! I'm FM Assist** — your facilities management fault-reporting assistant.
 
 I'm trained on your complete fault-finding knowledge base covering **22 equipment categories** across all store departments.
+
+I can:
+• **Log a fault** — walk you through every question step by step
+• **Answer questions** — checklists, SLAs, equipment procedures
+• **Generate a report** — ready for your service provider
 
 What would you like to do?`, 'bot');
 

@@ -15,6 +15,8 @@
             --text: #1a1a1a;
             --navy: #0A1F44;
             --teal: #028090;
+            --red: #E53935;
+            --white: #FFFFFF;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -25,7 +27,7 @@
             line-height: 1.6;
         }
 
-        /* --- Placeholder Wellness Content --- */
+        /* --- Wellness Content Styles --- */
         header {
             background: white;
             padding: 20px 5%;
@@ -66,46 +68,47 @@
 
         footer { background: var(--primary); color: white; padding: 40px 5%; text-align: center; }
 
-        /* --- Floating Launcher --- */
+        /* --- Modern FM Launcher (from user design) --- */
         .fm-launcher {
-            position: fixed;
-            bottom: 24px;
-            right: 24px;
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--navy), var(--teal));
-            border: none;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 20px rgba(10,31,68,0.3);
-            z-index: 9999;
-            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+          position: fixed;
+          bottom: 24px;
+          right: 24px;
+          width: 56px;
+          height: 56px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, var(--navy), var(--teal));
+          border: none;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 4px 20px rgba(10,31,68,.3), 0 0 0 0 rgba(2,128,144,.4);
+          animation: launcherpulse 3s infinite;
+          z-index: 9999;
+          transition: transform .15s;
         }
-        .fm-launcher:hover { transform: scale(1.1); }
-        .fm-launcher svg { width: 28px; height: 28px; fill: white; }
+        .fm-launcher:hover { transform: scale(1.08); }
+        @keyframes launcherpulse {
+          0%,100% { box-shadow: 0 4px 20px rgba(10,31,68,.3), 0 0 0 0 rgba(2,128,144,.4); }
+          50% { box-shadow: 0 4px 20px rgba(10,31,68,.3), 0 0 0 10px rgba(2,128,144,.0); }
+        }
+        .fm-launcher svg { width: 26px; height: 26px; fill: var(--white); }
         .fm-notif-dot {
-            position: absolute;
-            top: 2px;
-            right: 2px;
-            width: 14px;
-            height: 14px;
-            background: #E53935;
-            border: 2px solid white;
-            border-radius: 50%;
+          position: absolute; top: 2px; right: 2px;
+          width: 12px; height: 12px; border-radius: 50%;
+          background: var(--red); border: 2px solid var(--white);
+          display: none;
         }
 
         /* --- Widget Container --- */
         .fm-widget-container {
             position: fixed;
-            bottom: 100px;
+            bottom: 96px;
             right: 24px;
             width: 400px;
             height: 600px;
             max-width: calc(100vw - 48px);
-            max-height: calc(100vh - 140px);
+            max-height: calc(100vh - 120px);
             background: white;
             border-radius: 24px;
             box-shadow: 0 8px 48px rgba(10,31,68,0.18);
@@ -171,7 +174,7 @@
         <p>&copy; 2024 SouthAfrica's Soul. All rights reserved.</p>
     </footer>
 
-    <!-- FM Assist Launcher -->
+    <!-- FM Assist Launcher (Modern Design) -->
     <button class="fm-launcher" onclick="toggleFM()">
         <svg viewBox="0 0 24 24" id="fm-icon-open"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
         <svg viewBox="0 0 24 24" id="fm-icon-close" style="display:none"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>

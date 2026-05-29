@@ -286,14 +286,26 @@ function handleInput(session, input) {
         if (state.step === 1) { data.store = text; state.step = 2; }
         else if (state.step === 2) { data.reporter = text; state.step = 3; }
         else if (state.step === 3) {
+            let catId = null;
             const match = text.match(/\d+/);
-            const catId = match ? parseInt(match[0]) : null;
+
+            if (match) {
+                catId = parseInt(match[0]);
+            } else {
+                // Try fuzzy matching on category name (for UI chips)
+                const search = text.toLowerCase();
+                const entry = Object.entries(CATEGORIES).find(([id, name]) =>
+                    name.toLowerCase().includes(search)
+                );
+                if (entry) catId = parseInt(entry[0]);
+            }
+
             if (catId && CATEGORIES[catId]) {
                 data.category_id = catId;
                 data.category = CATEGORIES[catId];
                 state.step = 4;
             } else {
-                return "Invalid category. Please enter a number between 1 and 22.";
+                return "Invalid category. Please enter a number between 1 and 22 or select from the options.";
             }
         }
         else if (state.step === 4) { data.location = text; state.step = 5; }
