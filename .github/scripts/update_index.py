@@ -37,10 +37,15 @@ def update_index(target_path, source_path):
     old_container = target_soup.find('div', class_='fm-widget-container')
     if old_container: old_container.decompose()
 
-    # Find scripts that contain toggleFM
+    # REMOVE OLD CHAT WIDGET (id="chat-widget")
+    old_widget = target_soup.find('div', id='chat-widget')
+    if old_widget: old_widget.decompose()
+
+    # Find and remove scripts that contain toggleFM or the old chatbot logic (BACKEND_URL)
     for script in target_soup.find_all('script'):
-        if script.string and 'toggleFM' in script.string:
-            script.decompose()
+        if script.string:
+            if 'toggleFM' in script.string or 'BACKEND_URL' in script.string or 'chat-widget' in script.string:
+                script.decompose()
 
     # Get new elements from source
     new_launcher = source_soup.find('button', class_='fm-launcher')

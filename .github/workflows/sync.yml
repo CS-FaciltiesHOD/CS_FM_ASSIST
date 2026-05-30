@@ -35,13 +35,49 @@ jobs:
           # Create api directory in target if it doesn't exist
           mkdir -p target/api
 
-          # Copy chatbot logic and config
+          # Copy chatbot logic
           cp -r source/api/* target/api/
+
+          # Copy embed.html to root AND public/ (for Vite compatibility)
           cp source/embed.html target/
-          cp source/vercel.json target/
+          if [ -d "target/public" ]; then
+            cp source/embed.html target/public/
+          fi
+
+          # Handle vercel.json rewrites safely
+          if [ -f "target/vercel.json" ]; then
+            echo "vercel.json exists. Attempting to add chatbot rewrites..."
+            # Check if /api/chat rewrite already exists
+            if grep -q "/api/chat" target/vercel.json; then
+              echo "Rewrites already present."
+            else
+              # Use python to safely inject rewrites into existing vercel.json
+              python3 -c "
+import json, sys
+with open('target/vercel.json', 'r') as f:
+    data = json.load(f)
+if 'rewrites' not in data:
+    data['rewrites'] = []
+data['rewrites'].extend([
+    { 'source': '/api/chat', 'destination': '/api/chat.js' },
+    { 'source': '/api/webhook/whatsapp', 'destination': '/api/webhook/whatsapp.js' },
+    { 'source': '/api/webhook/telegram', 'destination': '/api/webhook/telegram.js' }
+])
+with open('target/vercel.json', 'w') as f:
+    json.dump(data, f, indent=2)
+"
+            fi
+          else
+            cp source/vercel.json target/
+          fi
 
           # Update index.html with the new launcher using BeautifulSoup
-          python3 source/.github/scripts/update_index.py target/index.html source/index.html
+          # We check for index.html in root and src/ (common Vite locations)
+          if [ -f "target/index.html" ]; then
+            python3 source/.github/scripts/update_index.py target/index.html source/index.html
+          elif [ -f "target/src/index.html" ]; then
+             python3 source/.github/scripts/update_index.py target/src/index.html source/index.html
+          fi
 
       - name: Commit and Push
         run: |
@@ -49,5 +85,5 @@ jobs:
           git config user.name "GitHub Action"
           git config user.email "action@github.com"
           git add .
-          git diff-index --quiet HEAD || git commit -m "Sync chatbot components from CS_FM_ASSIST"
+          git diff-index --quiet HEAD || git commit -m "Sync chatbot components from CS_FM_ASSIST and fix UI overlap"
           git push origin main
