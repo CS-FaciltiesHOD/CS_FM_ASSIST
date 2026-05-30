@@ -34,11 +34,17 @@ async function handleCompletedReport(session, userId, reportText) {
         reporter: getValue('Reported by') !== 'N/A' ? getValue('Reported by') : getValue('Reporter'),
         category: getValue('Category'),
         equipment: getValue('Equipment'),
+        brandModel: 'See Details', // Logic engine combines these
+        assetTag: 'See Details',
+        serialNumber: 'See Details',
         location: getValue('Location'),
         powerStatus: getValue('Power status'),
         failingTo: getValue('Failing to'),
+        failureMode: getValue('Failing to'),
+        faultType: getValue('Category'),
         priority: getValue('Priority'),
         diagnostic: getValue('Other findings'),
+        technicianNeeded: 'Yes',
         history: session.history
     };
 
@@ -68,21 +74,10 @@ module.exports = async (req, res) => {
     session.history.push({ role: 'user', content: message });
 
     try {
+        console.log(`[Chat] Message from ${sessionId}: ${message}`);
         let reply;
 
         if (USE_AI_BRAIN) {
-            /*
-               --- ANTHROPIC AI PATH (Rendered invalid but preserved for future activation) ---
-               const Anthropic = require('@anthropic-ai/sdk');
-               const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-               const response = await anthropic.messages.create({
-                   model: 'claude-3-5-sonnet-20240620',
-                   max_tokens: 1024,
-                   system: require('./knowledge-base.js').SYSTEM_PROMPT,
-                   messages: session.history
-               });
-               reply = response.content[0].text;
-            */
             reply = "AI Brain is currently disabled. Please use the Logic Engine.";
         } else {
             reply = await getLogicResponse(`web-${sessionId}`, message, session);
@@ -90,13 +85,22 @@ module.exports = async (req, res) => {
 
         session.history.push({ role: 'assistant', content: reply });
 
-        if (reply.includes('━━━ FM FAULT REPORT #')) {
-            await handleCompletedReport(session, `web-${sessionId}`, reply);
+        // Only send the notification when the report is actually SUBMITTED (Success message)
+        if (reply.includes('submitted successfully')) {
+            console.log(`[Chat] Report submitted for ${sessionId}. Sending notifications...`);
+            try {
+                await handleCompletedReport(session, `web-${sessionId}`, reply);
+            } catch (notifyErr) {
+                console.error('[Chat] Notification failed:', notifyErr);
+                // We don't crash the response if notification fails,
+                // but the log will show it.
+            }
             session.history = [];
         }
 
         res.status(200).json({ reply });
     } catch (e) {
+        console.error('[Chat] Error:', e);
         res.status(500).json({ error: e.message });
     }
 };
