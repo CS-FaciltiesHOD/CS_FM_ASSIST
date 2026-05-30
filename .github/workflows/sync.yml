@@ -44,29 +44,9 @@ jobs:
             cp source/embed.html target/public/
           fi
 
-          # Handle vercel.json rewrites safely
+          # Handle vercel.json rewrites safely using external script
           if [ -f "target/vercel.json" ]; then
-            echo "vercel.json exists. Attempting to add chatbot rewrites..."
-            # Check if /api/chat rewrite already exists
-            if grep -q "/api/chat" target/vercel.json; then
-              echo "Rewrites already present."
-            else
-              # Use python to safely inject rewrites into existing vercel.json
-              python3 -c "
-import json, sys
-with open('target/vercel.json', 'r') as f:
-    data = json.load(f)
-if 'rewrites' not in data:
-    data['rewrites'] = []
-data['rewrites'].extend([
-    { 'source': '/api/chat', 'destination': '/api/chat.js' },
-    { 'source': '/api/webhook/whatsapp', 'destination': '/api/webhook/whatsapp.js' },
-    { 'source': '/api/webhook/telegram', 'destination': '/api/webhook/telegram.js' }
-])
-with open('target/vercel.json', 'w') as f:
-    json.dump(data, f, indent=2)
-"
-            fi
+            python3 source/.github/scripts/update_vercel_json.py target/vercel.json
           else
             cp source/vercel.json target/
           fi
