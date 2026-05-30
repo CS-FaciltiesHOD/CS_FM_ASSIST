@@ -1,57 +1,61 @@
 import sys
+from bs4 import BeautifulSoup
 import re
 
 def update_index(target_path, source_path):
     with open(target_path, 'r') as f:
-        target_content = f.read()
+        target_soup = BeautifulSoup(f, 'html.parser')
 
     with open(source_path, 'r') as f:
-        source_content = f.read()
+        source_soup = BeautifulSoup(f, 'html.parser')
 
-    # Extract the launcher and widget parts from the source index.html
-    # Look for the FM Assist Launcher and Container comments
-    launcher_match = re.search(r'<!-- FM Assist Launcher -->.*?<!-- FM Assist Container -->.*?<script>.*?</script>', source_content, re.DOTALL)
+    # 1. Update Styles
+    # Find the FM Launcher design block in source
+    source_style = source_soup.find('style', string=re.compile(r'FM Launcher design'))
+    source_root = source_soup.find('style', string=re.compile(r':root'))
 
-    if not launcher_match:
-        # Fallback: extract by the specific classes and IDs
-        launcher_part = re.search(r'<button class="fm-launcher".*?</script>', source_content, re.DOTALL)
-        if launcher_part:
-            launcher_code = launcher_part.group(0)
-        else:
-            print("Could not find launcher code in source index.html")
-            return
-    else:
-        launcher_code = launcher_match.group(0)
+    # Remove existing FM styles from target
+    for style in target_soup.find_all('style'):
+        if style.string and ('FM Launcher design' in style.string or ':root' in style.string):
+            style.decompose()
 
-    # Extract the style block for the launcher
-    style_match = re.search(r'/\* --- FM Launcher design ---\s\*/.*?(?=</style>)', source_content, re.DOTALL)
+    # Add new styles to head
+    if source_root:
+        target_soup.head.append(source_root)
+    if source_style:
+        target_soup.head.append(source_style)
 
-    # Also extract :root variables for colors
-    root_match = re.search(r':root\s*\{.*?\}', source_content, re.DOTALL)
+    # 2. Update Launcher and Container
+    # Remove existing launcher, container and toggle script from target
+    launcher = target_soup.find('button', class_='fm-launcher')
+    if launcher: launcher.decompose()
 
-    launcher_styles = "<style>\n"
-    if root_match:
-        launcher_styles += root_match.group(0) + "\n"
-    if style_match:
-        launcher_styles += style_match.group(0) + "\n"
-    launcher_styles += "</style>"
+    container = target_soup.find('div', id='fm-container')
+    if container: container.decompose()
 
-    if not style_match and not root_match:
-        launcher_styles = ""
+    # The target might have a different container ID/class in the old version
+    old_container = target_soup.find('div', class_='fm-widget-container')
+    if old_container: old_container.decompose()
 
-    # Remove the old widget from the target index.html
-    # The target has <!-- FM Assist Chat Widget --> and a large <script> block
-    new_target_content = re.sub(r'<!-- FM Assist Chat Widget -->.*?<script>.*?</script>', '', target_content, flags=re.DOTALL)
+    # Find scripts that contain toggleFM
+    for script in target_soup.find_all('script'):
+        if script.string and 'toggleFM' in script.string:
+            script.decompose()
 
-    # Insert styles before </head>
-    if launcher_styles:
-        new_target_content = new_target_content.replace('</head>', f'{launcher_styles}\n</head>')
+    # Get new elements from source
+    new_launcher = source_soup.find('button', class_='fm-launcher')
+    new_container = source_soup.find('div', id='fm-container')
+    new_script = source_soup.find('script', string=re.compile(r'toggleFM'))
 
-    # Insert launcher before </body>
-    new_target_content = new_target_content.replace('</body>', f'{launcher_code}\n</body>')
+    # Append to body
+    if new_launcher: target_soup.body.append(new_launcher)
+    if new_container: target_soup.body.append(new_container)
+    if new_script: target_soup.body.append(new_script)
 
+    # Write back to target
     with open(target_path, 'w') as f:
-        f.write(new_target_content)
+        # Use formatter=None to prevent BeautifulSoup from converting entities like &copy;
+        f.write(target_soup.prettify(formatter=None))
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:

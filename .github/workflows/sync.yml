@@ -22,6 +22,14 @@ jobs:
           token: ${{ secrets.SYNC_TOKEN }}
           path: target
 
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install Dependencies
+        run: pip install beautifulsoup4
+
       - name: Sync Files
         run: |
           # Create api directory in target if it doesn't exist
@@ -32,8 +40,7 @@ jobs:
           cp source/embed.html target/
           cp source/vercel.json target/
 
-          # Update index.html with the new launcher
-          # We will use a python script for safer replacement of the old widget
+          # Update index.html with the new launcher using BeautifulSoup
           python3 source/.github/scripts/update_index.py target/index.html source/index.html
 
       - name: Commit and Push
