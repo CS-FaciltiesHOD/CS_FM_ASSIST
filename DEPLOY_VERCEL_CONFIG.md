@@ -20,8 +20,8 @@ After you have imported the repository into Vercel, you must set up the "Environ
 ### 2. Set up the Custom Domain
 1. Go to **Settings > Domains**.
 2. Click **Add**.
-3. Type `api.southafricassoul.co.za`.
+3. Type `www.southafricassoul.co.za`.
 4. Vercel will give you a "CNAME" record. Copy this and add it to your domain's DNS settings (where you bought your domain).
 
 **Your new API address will be:**
-`https://api.southafricassoul.co.za`
+`https://www.southafricassoul.co.za`

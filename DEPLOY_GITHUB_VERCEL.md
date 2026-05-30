@@ -23,4 +23,4 @@ git push -u origin main
    - **Option A (Connected Repos):** Add the new `fm-assist-engine` repository as a "connected repository".
    - **Option B (Separate Project):** Create a NEW project on Vercel for the chatbot, and then add your domain `www.southafricassoul.co.za` to it later.
 
-*Recommendation:* Use **Option B** (Create a New Project) and use a subdomain like `api.southafricassoul.co.za`. This keeps your website and your chatbot engine completely separate and secure.
+*Recommendation:* Use **Option B** (Create a New Project) and use a subdomain like `www.southafricassoul.co.za`. This keeps your website and your chatbot engine completely separate and secure.
