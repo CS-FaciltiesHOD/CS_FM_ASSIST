@@ -16,7 +16,7 @@ def update_index(target_path, source_path):
     # Remove existing FM styles and Launcher styles from target
     # We look for the ID 'fm-styles' or the old string pattern
     for style in target_soup.find_all('style'):
-        if style.get('id') == 'fm-styles' or (style.string and 'FM Launcher design' in style.string):
+        if style.get('id') == 'fm-styles' or (style.string and ('FM Launcher design' in style.string or 'fm-launcher' in style.string)):
             style.decompose()
 
     # Add new FM styles to head
@@ -39,10 +39,11 @@ def update_index(target_path, source_path):
     old_widget = target_soup.find('div', id='chat-widget')
     if old_widget: old_widget.decompose()
 
-    # Find and remove scripts that contain toggleFM or the old chatbot logic (BACKEND_URL)
+    # Find and remove scripts that contain toggleFM or the old chatbot logic
     for script in target_soup.find_all('script'):
         if script.string:
-            if 'toggleFM' in script.string or 'BACKEND_URL' in script.string or 'chat-widget' in script.string:
+            s = script.string
+            if 'toggleFM' in s or 'BACKEND_URL' in s or 'chat-widget' in s or 'cs-fm-assist.vercel.app' in s or 'chat-messages' in s:
                 script.decompose()
 
     # Get new elements from source
