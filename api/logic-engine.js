@@ -466,9 +466,14 @@ function generateReport(session) {
 }
 
 async function getLogicResponse(userId, userMessage, session) {
-    if (userMessage.toLowerCase() === 'reset' || userMessage.toLowerCase() === 'restart') {
+    const lowMsg = userMessage.toLowerCase();
+
+    if (lowMsg === 'reset' || lowMsg === 'restart' || lowMsg === 'start_bot') {
         session.state = { phase: PHASES.IDENTIFICATION, step: 1 };
         session.data = {};
+        if (lowMsg === 'start_bot') {
+            return "Good day! I'm FM Assist — your facilities management fault-reporting assistant. I'm trained on your complete diagnostic knowledge base.\n\nWhat would you like to do?\n1. Log a fault\n2. Show fault categories\n3. What are the SLAs?";
+        }
         return getNextQuestion(session);
     }
 
@@ -480,7 +485,7 @@ async function getLogicResponse(userId, userMessage, session) {
 
     const result = handleInput(session, userMessage);
 
-    if (userMessage.toLowerCase() === 'log a fault') {
+    if (lowMsg === 'log a fault' || lowMsg === 'log fault') {
         session.state = { phase: PHASES.IDENTIFICATION, step: 1 };
         session.data = {};
         return getNextQuestion(session);
