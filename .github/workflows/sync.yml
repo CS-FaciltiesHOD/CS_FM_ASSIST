@@ -1,0 +1,53 @@
+name: Sync to SouthAfricasSoul
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v3
+        with:
+          path: source
+
+      - name: Checkout Target
+        uses: actions/checkout@v3
+        with:
+          repository: southafricassoul/SouthAfricasSoul
+          token: ${{ secrets.SYNC_TOKEN }}
+          path: target
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install Dependencies
+        run: pip install beautifulsoup4
+
+      - name: Sync Files
+        run: |
+          # Create api directory in target if it doesn't exist
+          mkdir -p target/api
+
+          # Copy chatbot logic and config
+          cp -r source/api/* target/api/
+          cp source/embed.html target/
+          cp source/vercel.json target/
+
+          # Update index.html with the new launcher using BeautifulSoup
+          python3 source/.github/scripts/update_index.py target/index.html source/index.html
+
+      - name: Commit and Push
+        run: |
+          cd target
+          git config user.name "GitHub Action"
+          git config user.email "action@github.com"
+          git add .
+          git diff-index --quiet HEAD || git commit -m "Sync chatbot components from CS_FM_ASSIST"
+          git push origin main

@@ -1,15 +1,8 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "server.js",
-      "use": "@vercel/node"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "server.js"
-    }
+  "rewrites": [
+    { "source": "/api/chat", "destination": "/api/chat.js" },
+    { "source": "/api/webhook/whatsapp", "destination": "/api/webhook/whatsapp.js" },
+    { "source": "/api/webhook/telegram", "destination": "/api/webhook/telegram.js" }
   ]
 }

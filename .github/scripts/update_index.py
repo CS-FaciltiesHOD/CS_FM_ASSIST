@@ -1,0 +1,64 @@
+import sys
+from bs4 import BeautifulSoup
+import re
+
+def update_index(target_path, source_path):
+    with open(target_path, 'r') as f:
+        target_soup = BeautifulSoup(f, 'html.parser')
+
+    with open(source_path, 'r') as f:
+        source_soup = BeautifulSoup(f, 'html.parser')
+
+    # 1. Update Styles
+    # Find the FM Launcher design block in source
+    source_style = source_soup.find('style', string=re.compile(r'FM Launcher design'))
+    source_root = source_soup.find('style', string=re.compile(r':root'))
+
+    # Remove existing FM styles from target
+    for style in target_soup.find_all('style'):
+        if style.string and ('FM Launcher design' in style.string or ':root' in style.string):
+            style.decompose()
+
+    # Add new styles to head
+    if source_root:
+        target_soup.head.append(source_root)
+    if source_style:
+        target_soup.head.append(source_style)
+
+    # 2. Update Launcher and Container
+    # Remove existing launcher, container and toggle script from target
+    launcher = target_soup.find('button', class_='fm-launcher')
+    if launcher: launcher.decompose()
+
+    container = target_soup.find('div', id='fm-container')
+    if container: container.decompose()
+
+    # The target might have a different container ID/class in the old version
+    old_container = target_soup.find('div', class_='fm-widget-container')
+    if old_container: old_container.decompose()
+
+    # Find scripts that contain toggleFM
+    for script in target_soup.find_all('script'):
+        if script.string and 'toggleFM' in script.string:
+            script.decompose()
+
+    # Get new elements from source
+    new_launcher = source_soup.find('button', class_='fm-launcher')
+    new_container = source_soup.find('div', id='fm-container')
+    new_script = source_soup.find('script', string=re.compile(r'toggleFM'))
+
+    # Append to body
+    if new_launcher: target_soup.body.append(new_launcher)
+    if new_container: target_soup.body.append(new_container)
+    if new_script: target_soup.body.append(new_script)
+
+    # Write back to target
+    with open(target_path, 'w') as f:
+        # Use formatter=None to prevent BeautifulSoup from converting entities like &copy;
+        f.write(target_soup.prettify(formatter=None))
+
+if __name__ == "__main__":
+    if len(sys.argv) < 3:
+        print("Usage: python update_index.py <target_index_path> <source_index_path>")
+        sys.exit(1)
+    update_index(sys.argv[1], sys.argv[2])
