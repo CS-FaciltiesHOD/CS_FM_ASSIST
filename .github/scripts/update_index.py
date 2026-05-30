@@ -10,20 +10,18 @@ def update_index(target_path, source_path):
         source_soup = BeautifulSoup(f, 'html.parser')
 
     # 1. Update Styles
-    # Find the FM Launcher design block in source
-    source_style = source_soup.find('style', string=re.compile(r'FM Launcher design'))
-    source_root = source_soup.find('style', string=re.compile(r':root'))
+    # Find the specific style blocks in source
+    source_fm_style = source_soup.find('style', id='fm-styles')
 
-    # Remove existing FM styles from target
+    # Remove existing FM styles and Launcher styles from target
+    # We look for the ID 'fm-styles' or the old string pattern
     for style in target_soup.find_all('style'):
-        if style.string and ('FM Launcher design' in style.string or ':root' in style.string):
+        if style.get('id') == 'fm-styles' or (style.string and ('FM Launcher design' in style.string or 'fm-launcher' in style.string)):
             style.decompose()
 
-    # Add new styles to head
-    if source_root:
-        target_soup.head.append(source_root)
-    if source_style:
-        target_soup.head.append(source_style)
+    # Add new FM styles to head
+    if source_fm_style:
+        target_soup.head.append(source_fm_style)
 
     # 2. Update Launcher and Container
     # Remove existing launcher, container and toggle script from target
@@ -37,10 +35,16 @@ def update_index(target_path, source_path):
     old_container = target_soup.find('div', class_='fm-widget-container')
     if old_container: old_container.decompose()
 
-    # Find scripts that contain toggleFM
+    # REMOVE OLD CHAT WIDGET (id="chat-widget")
+    old_widget = target_soup.find('div', id='chat-widget')
+    if old_widget: old_widget.decompose()
+
+    # Find and remove scripts that contain toggleFM or the old chatbot logic
     for script in target_soup.find_all('script'):
-        if script.string and 'toggleFM' in script.string:
-            script.decompose()
+        if script.string:
+            s = script.string
+            if 'toggleFM' in s or 'BACKEND_URL' in s or 'chat-widget' in s or 'cs-fm-assist.vercel.app' in s or 'chat-messages' in s:
+                script.decompose()
 
     # Get new elements from source
     new_launcher = source_soup.find('button', class_='fm-launcher')

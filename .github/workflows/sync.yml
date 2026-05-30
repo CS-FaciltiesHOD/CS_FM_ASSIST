@@ -11,19 +11,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Source
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           path: source
 
       - name: Checkout Target
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: southafricassoul/SouthAfricasSoul
           token: ${{ secrets.SYNC_TOKEN }}
           path: target
 
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.x'
 
@@ -35,13 +35,29 @@ jobs:
           # Create api directory in target if it doesn't exist
           mkdir -p target/api
 
-          # Copy chatbot logic and config
+          # Copy chatbot logic
           cp -r source/api/* target/api/
+
+          # Copy embed.html to root AND public/ (for Vite compatibility)
           cp source/embed.html target/
-          cp source/vercel.json target/
+          if [ -d "target/public" ]; then
+            cp source/embed.html target/public/
+          fi
+
+          # Handle vercel.json rewrites safely using external script
+          if [ -f "target/vercel.json" ]; then
+            python3 source/.github/scripts/update_vercel_json.py target/vercel.json
+          else
+            cp source/vercel.json target/
+          fi
 
           # Update index.html with the new launcher using BeautifulSoup
-          python3 source/.github/scripts/update_index.py target/index.html source/index.html
+          # We check for index.html in root and src/ (common Vite locations)
+          if [ -f "target/index.html" ]; then
+            python3 source/.github/scripts/update_index.py target/index.html source/index.html
+          elif [ -f "target/src/index.html" ]; then
+             python3 source/.github/scripts/update_index.py target/src/index.html source/index.html
+          fi
 
       - name: Commit and Push
         run: |
@@ -49,5 +65,5 @@ jobs:
           git config user.name "GitHub Action"
           git config user.email "action@github.com"
           git add .
-          git diff-index --quiet HEAD || git commit -m "Sync chatbot components from CS_FM_ASSIST"
+          git diff-index --quiet HEAD || git commit -m "Sync chatbot components from CS_FM_ASSIST and fix UI overlap"
           git push origin main
