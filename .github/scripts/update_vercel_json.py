@@ -15,29 +15,24 @@ def update_vercel(target_path):
             data['rewrites'] = []
 
         new_rewrites = [
-            { "source": "/api/chat", "destination": "/api/chat.cjs" },
-            { "source": "/api/webhook/whatsapp", "destination": "/api/webhook/whatsapp.cjs" },
-            { "source": "/api/webhook/telegram", "destination": "/api/webhook/telegram.cjs" }
+            { "source": "/api/chat", "destination": "/api/chat.js" },
+            { "source": "/api/webhook/whatsapp", "destination": "/api/webhook/whatsapp.js" },
+            { "source": "/api/webhook/telegram", "destination": "/api/webhook/telegram.js" }
         ]
 
         added = False
-        for nr in new_rewrites:
-            # Find if this source already exists
-            existing = next((r for r in data['rewrites'] if r.get('source') == nr['source']), None)
-            if existing:
-                if existing['destination'] != nr['destination']:
-                    existing['destination'] = nr['destination']
-                    added = True
-                    print(f"Updated rewrite for {nr['source']} to {nr['destination']}")
-            else:
-                data['rewrites'].append(nr)
-                added = True
-                print(f"Added rewrite for {nr['source']} to {nr['destination']}")
+        # Remove any existing rewrites for these sources to avoid duplicates or old .cjs routes
+        sources_to_add = [nr['source'] for nr in new_rewrites]
+        data['rewrites'] = [r for r in data['rewrites'] if r.get('source') not in sources_to_add]
+
+        # Prepend new rewrites to ensure priority
+        data['rewrites'] = new_rewrites + data['rewrites']
+        added = True
 
         if added:
             with open(target_path, 'w') as f:
                 json.dump(data, f, indent=2)
-            print(f"Successfully updated {target_path} with chatbot rewrites.")
+            print(f"Successfully updated {target_path} with chatbot rewrites (prepended).")
         else:
             print(f"Chatbot rewrites already up to date in {target_path}.")
 

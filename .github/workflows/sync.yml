@@ -35,9 +35,11 @@ jobs:
           # Create api directory in target if it doesn't exist
           mkdir -p target/api
 
-          # Remove old .js files in api to prevent conflicts with .cjs
+          # Remove old chatbot files in api to prevent conflicts
           rm -f target/api/*.js
+          rm -f target/api/*.cjs
           rm -f target/api/webhook/*.js
+          rm -f target/api/webhook/*.cjs
 
           # Copy chatbot logic
           cp -r source/api/* target/api/
