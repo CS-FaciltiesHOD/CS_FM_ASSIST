@@ -39,10 +39,10 @@ jobs:
           cp -r source/api/* target/api/
 
           # Copy embed.html to root AND public/ (for Vite compatibility)
+          # We force create public/ because Vite projects need static assets there
+          mkdir -p target/public
+          cp source/embed.html target/public/
           cp source/embed.html target/
-          if [ -d "target/public" ]; then
-            cp source/embed.html target/public/
-          fi
 
           # Handle vercel.json rewrites safely using external script
           if [ -f "target/vercel.json" ]; then
