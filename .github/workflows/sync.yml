@@ -35,11 +35,7 @@ jobs:
           # Create api directory in target if it doesn't exist
           mkdir -p target/api
 
-          # Remove old .js files in api to prevent conflicts with .cjs
-          rm -f target/api/*.js
-          rm -f target/api/webhook/*.js
-
-          # Copy chatbot logic
+          # Copy chatbot logic (including api/package.json)
           cp -r source/api/* target/api/
 
           # Copy embed.html to root AND public/ (for Vite compatibility)
