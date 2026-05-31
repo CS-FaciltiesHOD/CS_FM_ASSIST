@@ -1,6 +1,6 @@
 // api/chat.js
-const { getLogicResponse } = require('./logic-engine.js');
-const { sendFaultNotification } = require('./notify.js');
+const { getLogicResponse } = require('./logic-engine.cjs');
+const { sendFaultNotification } = require('./notify.cjs');
 
 // Simple in-memory session store (Note: cleared on Vercel spin-down,
 // for production integration with a main site, a DB like Upstash/Redis is better,

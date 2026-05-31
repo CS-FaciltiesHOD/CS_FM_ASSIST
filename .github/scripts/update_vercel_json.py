@@ -18,9 +18,9 @@ def update_vercel(target_path):
         existing_sources = [r.get('source') for r in data['rewrites']]
 
         new_rewrites = [
-            { "source": "/api/chat", "destination": "/api/chat.js" },
-            { "source": "/api/webhook/whatsapp", "destination": "/api/webhook/whatsapp.js" },
-            { "source": "/api/webhook/telegram", "destination": "/api/webhook/telegram.js" }
+            { "source": "/api/chat", "destination": "/api/chat.cjs" },
+            { "source": "/api/webhook/whatsapp", "destination": "/api/webhook/whatsapp.cjs" },
+            { "source": "/api/webhook/telegram", "destination": "/api/webhook/telegram.cjs" }
         ]
 
         added = False

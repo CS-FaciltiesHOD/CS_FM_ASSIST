@@ -1,6 +1,6 @@
 const TelegramBot = require('node-telegram-bot-api');
-const { getLogicResponse } = require('../logic-engine.js');
-const { sendFaultNotification } = require('../notify.js');
+const { getLogicResponse } = require('../logic-engine.cjs');
+const { sendFaultNotification } = require('../notify.cjs');
 
 const sessions = {};
 function getSession(userId) {
