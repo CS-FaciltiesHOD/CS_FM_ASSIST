@@ -14,27 +14,32 @@ def update_vercel(target_path):
         if 'rewrites' not in data:
             data['rewrites'] = []
 
-        # Check if already present to avoid duplicates
-        existing_sources = [r.get('source') for r in data['rewrites']]
-
         new_rewrites = [
-            { "source": "/api/chat", "destination": "/api/chat.js" },
-            { "source": "/api/webhook/whatsapp", "destination": "/api/webhook/whatsapp.js" },
-            { "source": "/api/webhook/telegram", "destination": "/api/webhook/telegram.js" }
+            { "source": "/api/chat", "destination": "/api/chat.cjs" },
+            { "source": "/api/webhook/whatsapp", "destination": "/api/webhook/whatsapp.cjs" },
+            { "source": "/api/webhook/telegram", "destination": "/api/webhook/telegram.cjs" }
         ]
 
         added = False
         for nr in new_rewrites:
-            if nr['source'] not in existing_sources:
+            # Find if this source already exists
+            existing = next((r for r in data['rewrites'] if r.get('source') == nr['source']), None)
+            if existing:
+                if existing['destination'] != nr['destination']:
+                    existing['destination'] = nr['destination']
+                    added = True
+                    print(f"Updated rewrite for {nr['source']} to {nr['destination']}")
+            else:
                 data['rewrites'].append(nr)
                 added = True
+                print(f"Added rewrite for {nr['source']} to {nr['destination']}")
 
         if added:
             with open(target_path, 'w') as f:
                 json.dump(data, f, indent=2)
             print(f"Successfully updated {target_path} with chatbot rewrites.")
         else:
-            print(f"Chatbot rewrites already present in {target_path}.")
+            print(f"Chatbot rewrites already up to date in {target_path}.")
 
     except Exception as e:
         print(f"Error updating vercel.json: {e}")

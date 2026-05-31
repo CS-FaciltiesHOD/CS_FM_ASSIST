@@ -35,6 +35,10 @@ jobs:
           # Create api directory in target if it doesn't exist
           mkdir -p target/api
 
+          # Remove old .js files in api to prevent conflicts with .cjs
+          rm -f target/api/*.js
+          rm -f target/api/webhook/*.js
+
           # Copy chatbot logic
           cp -r source/api/* target/api/
 
@@ -49,6 +53,11 @@ jobs:
             python3 source/.github/scripts/update_vercel_json.py target/vercel.json
           else
             cp source/vercel.json target/
+          fi
+
+          # Update dependencies in package.json
+          if [ -f "target/package.json" ]; then
+            python3 source/.github/scripts/update_package_json.py target/package.json source/package.json
           fi
 
           # Update index.html with the new launcher using BeautifulSoup
