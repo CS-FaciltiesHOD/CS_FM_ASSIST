@@ -53,7 +53,7 @@ jobs:
 
           # Update dependencies in package.json
           if [ -f "target/package.json" ]; then
-            python3 source/.github/scripts/update_package_json.py target/package.json
+            python3 source/.github/scripts/update_package_json.py target/package.json source/package.json
           fi
 
           # Update index.html with the new launcher using BeautifulSoup
