@@ -51,6 +51,11 @@ jobs:
             cp source/vercel.json target/
           fi
 
+          # Update dependencies in package.json
+          if [ -f "target/package.json" ]; then
+            python3 source/.github/scripts/update_package_json.py target/package.json
+          fi
+
           # Update index.html with the new launcher using BeautifulSoup
           # We check for index.html in root and src/ (common Vite locations)
           if [ -f "target/index.html" ]; then
