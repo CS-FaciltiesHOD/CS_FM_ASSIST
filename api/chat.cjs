@@ -1,6 +1,6 @@
 // api/chat.js
-const { getLogicResponse } = require('./logic-engine.js');
-const { sendFaultNotification } = require('./notify.js');
+const { getLogicResponse } = require('./logic-engine.cjs');
+const { sendFaultNotification } = require('./notify.cjs');
 
 // Simple in-memory session store (Note: cleared on Vercel spin-down,
 // for production integration with a main site, a DB like Upstash/Redis is better,
@@ -59,6 +59,12 @@ module.exports = async (req, res) => {
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-fm-secret');
 
     if (req.method === 'OPTIONS') return res.status(200).end();
+
+    // Health Check
+    if (req.method === 'GET') {
+        return res.status(200).json({ status: 'online', service: 'FM Assist Chat API' });
+    }
+
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
     const secret = process.env.CHAT_WIDGET_SECRET || 'FM_ASSIST_SECRET';

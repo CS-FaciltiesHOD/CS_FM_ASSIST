@@ -590,7 +590,7 @@ async function fmSend() {
     setQuick(getQuickSuggestions(reply));
   } catch (e) {
     hideTyping();
-    addMsg('Connection error. Please try again in a moment.', 'bot');
+    addMsg('Connection error: ' + e.message + '. Please check your connection or contact support.', 'bot');
   }
 
   isBusy = false;
