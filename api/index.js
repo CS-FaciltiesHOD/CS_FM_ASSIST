@@ -1,10 +1,9 @@
 // api/chat.js
-const { getLogicResponse } = require('./logic-engine.cjs');
-const { sendFaultNotification } = require('./notify.cjs');
+const { getLogicResponse } = require('./logic-engine');
+const { sendFaultNotification } = require('./notify');
+const { SYSTEM_PROMPT } = require('./knowledge-base');
+const Anthropic = require('@anthropic-ai/sdk');
 
-// Simple in-memory session store (Note: cleared on Vercel spin-down,
-// for production integration with a main site, a DB like Upstash/Redis is better,
-// but for a deterministic flow it usually survives the session length).
 const sessions = {};
 function getSession(userId) {
     if (!sessions[userId]) {
@@ -34,17 +33,11 @@ async function handleCompletedReport(session, userId, reportText) {
         reporter: getValue('Reported by') !== 'N/A' ? getValue('Reported by') : getValue('Reporter'),
         category: getValue('Category'),
         equipment: getValue('Equipment'),
-        brandModel: 'See Details', // Logic engine combines these
-        assetTag: 'See Details',
-        serialNumber: 'See Details',
         location: getValue('Location'),
         powerStatus: getValue('Power status'),
         failingTo: getValue('Failing to'),
-        failureMode: getValue('Failing to'),
-        faultType: getValue('Category'),
         priority: getValue('Priority'),
         diagnostic: getValue('Other findings'),
-        technicianNeeded: 'Yes',
         history: session.history
     };
 
@@ -52,13 +45,27 @@ async function handleCompletedReport(session, userId, reportText) {
     session.media = [];
 }
 
+async function getAIResponse(message, history) {
+    if (!process.env.ANTHROPIC_API_KEY) return "AI Brain error: Missing API Key.";
+    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+    const response = await anthropic.messages.create({
+        model: "claude-3-5-sonnet-20240620",
+        max_tokens: 1024,
+        system: SYSTEM_PROMPT,
+        messages: history.map(h => ({ role: h.role, content: h.content }))
+    });
+
+    return response.content[0].text;
+}
+
 module.exports = async (req, res) => {
-    // CORS
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-fm-secret');
 
     if (req.method === 'OPTIONS') return res.status(200).end();
+    if (req.method === 'GET') return res.status(200).json({ status: 'FM Assist API Online', brain: process.env.ANTHROPIC_API_KEY ? 'AI' : 'Logic Engine' });
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
     const secret = process.env.CHAT_WIDGET_SECRET || 'FM_ASSIST_SECRET';
@@ -67,33 +74,27 @@ module.exports = async (req, res) => {
     const { sessionId, message } = req.body;
     if (!sessionId || !message) return res.status(400).json({ error: 'Missing' });
 
-    // AI MODE TOGGLE (Set to true to use Anthropic instead of Logic Engine)
-    const USE_AI_BRAIN = false;
-
+    const USE_AI_BRAIN = !!process.env.ANTHROPIC_API_KEY;
     const session = getSession(`web-${sessionId}`);
-    session.history.push({ role: 'user', content: message });
 
     try {
-        console.log(`[Chat] Message from ${sessionId}: ${message}`);
         let reply;
-
         if (USE_AI_BRAIN) {
-            reply = "AI Brain is currently disabled. Please use the Logic Engine.";
+            // Include current message in temporary history for AI
+            const tempHistory = [...session.history, { role: 'user', content: message }];
+            reply = await getAIResponse(message, tempHistory);
         } else {
             reply = await getLogicResponse(`web-${sessionId}`, message, session);
         }
 
+        session.history.push({ role: 'user', content: message });
         session.history.push({ role: 'assistant', content: reply });
 
-        // Only send the notification when the report is actually SUBMITTED (Success message)
-        if (reply.includes('submitted successfully')) {
-            console.log(`[Chat] Report submitted for ${sessionId}. Sending notifications...`);
+        if (reply.includes('submitted successfully') || reply.includes('FM FAULT REPORT')) {
             try {
                 await handleCompletedReport(session, `web-${sessionId}`, reply);
             } catch (notifyErr) {
                 console.error('[Chat] Notification failed:', notifyErr);
-                // We don't crash the response if notification fails,
-                // but the log will show it.
             }
             session.history = [];
         }

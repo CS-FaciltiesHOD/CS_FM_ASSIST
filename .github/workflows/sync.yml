@@ -35,9 +35,11 @@ jobs:
           # Create api directory in target if it doesn't exist
           mkdir -p target/api
 
-          # Remove old .js files in api to prevent conflicts with .cjs
+          # Remove old chatbot files in api to prevent conflicts
           rm -f target/api/*.js
+          rm -f target/api/*.cjs
           rm -f target/api/webhook/*.js
+          rm -f target/api/webhook/*.cjs
 
           # Copy chatbot logic
           cp -r source/api/* target/api/
@@ -73,6 +75,10 @@ jobs:
           cd target
           git config user.name "GitHub Action"
           git config user.email "action@github.com"
+          # Force add api directory to override any .gitignore in the target repo
+          git add -f api/
           git add .
+          echo "Checking target file structure..."
+          ls -R api/
           git diff-index --quiet HEAD || git commit -m "Sync chatbot components from CS_FM_ASSIST and fix UI overlap"
           git push origin main
