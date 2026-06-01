@@ -27,6 +27,147 @@ const CATEGORIES = {
     22: "General / Other"
 };
 
+const DIAGNOSTIC_FLOW = {
+    1: [ // Upright fridge
+        { q: "What is the current temperature reading on the display?" },
+        { q: "Is there airflow blowing from the vents at eye level? (Yes / No)" },
+        { q: "How many base fans underneath the unit are spinning? (All / Some / None)" },
+        { q: "Is there stagnant water visible near the base fans? (Yes / No)" },
+        { q: "Is there visible damage at the base — broken fan or burnt motor smell? (Yes / No)" },
+        { q: "Is this an AHT Freor unit? (Yes / No)", id: 'is_aht' },
+        { q: "Are the fans on top of the AHT Freor unit spinning? (Yes / No)", skip: (d) => d.is_aht?.toLowerCase().includes('no') }
+    ],
+    2: [ // Cold room
+        { q: "What is the current temperature reading on the display?" },
+        { q: "Are the blower fans inside the cold room spinning? (All / Some / None)", id: 'fans' },
+        { q: "How many fans are spinning out of the total? (e.g. 2 of 4)", skip: (d) => d.fans?.toLowerCase().includes('all') || d.fans?.toLowerCase().includes('none') },
+        { q: "Is there ice build-up on the blower unit? (Front / Back / Both / No)" },
+        { q: "Is the compressor fan spinning on the exterior unit outside the building? (Yes / No / Not visible)" }
+    ],
+    3: [ // Freezer room
+        { q: "What is the current temperature reading on the display?" },
+        { q: "Are the blower fans inside the freezer room spinning? (All / Some / None)", id: 'fans' },
+        { q: "How many fans are spinning out of the total? (e.g. 1 of 3)", skip: (d) => d.fans?.toLowerCase().includes('all') || d.fans?.toLowerCase().includes('none') },
+        { q: "Is there ice build-up on the blower unit? (Front / Back / Both / No)" },
+        { q: "Is the compressor fan spinning on the exterior unit? (Yes / No / Not visible)" }
+    ],
+    4: [ // Island freezer
+        { q: "What is the current temperature reading on the display?" },
+        { q: "Are the interior fans inside the island unit spinning? (All / Some — count / None)" },
+        { q: "Is there ice build-up on the interior evaporator? (Yes / No)" },
+        { q: "Is the compressor fan spinning on the exterior or base unit? (Yes / No / Not visible)" }
+    ],
+    5: [ // Serve over
+        { q: "What is the current temperature reading on the display?" },
+        { q: "Are the interior fans inside the serve-over spinning? (All / Some — count / None)" },
+        { q: "Is there ice build-up visible on any internal surface? (Yes — describe / No)" },
+        { q: "Is the compressor fan spinning on the exterior or base unit? (Yes / No / Not visible)" }
+    ],
+    13: [ // Trolleys - Customer
+        { q: "What is the fault?\n1. Wheels not rolling smoothly\n2. Wheel missing or broken\n3. Handle broken or loose\n4. Ear supports missing or broken\n5. Structural damage" },
+        { q: "How many units are affected? (1 / 2 to 5 / More than 5)" },
+        { q: "Are loose handles being stored for refitment — NOT discarded? (Yes / No)" }
+    ],
+    14: [ // Trolleys - Baskets etc
+        { q: "What is the fault?\n1. Wheels not rolling smoothly\n2. Wheel missing or broken\n3. Handle broken or loose\n4. Ear supports missing or broken\n5. Structural damage" },
+        { q: "How many units are affected? (1 / 2 to 5 / More than 5)" },
+        { q: "Are loose handles being stored for refitment — NOT discarded? (Yes / No)" }
+    ],
+    15: [ // Bakery
+        { q: "Are the moving parts of the equipment operating? (Yes / No)" },
+        { q: "Is the product feeding or loading correctly into the machine? (Yes / No / N/A)" },
+        { q: "Is the output consistent and within expected quality? (Yes / Inconsistent / No output)" },
+        { q: "Is there a jam, resistance, or overload indication? (Yes — describe / No)" },
+        { q: "Is the oven reaching and holding the set temperature? (Yes / No / N/A)" },
+        { q: "Is the oven fan rotating during operation? (Yes / No / N/A)" }
+    ],
+    16: [ // Butchery
+        { q: "Are all safety covers and blade guards in place and engaged? (Yes / No — specify which)" },
+        { q: "Are the blades or cutting mechanisms moving? (Yes / No / Intermittent)" },
+        { q: "Is the cutting or mincing output of acceptable quality? (Yes / Poor / No output)" },
+        { q: "Is there a blockage or product jam in the machine? (Yes / No)" },
+        { q: "Is there audible motor strain or unusual load sound? (Yes / No)" },
+        { q: "Is the vacuum sealing and suction functioning? (Yes / Partial / No / N/A)" }
+    ],
+    17: [ // Deli / Pie shop
+        { q: "Is the heating element or gas burner active and producing heat? (Yes / No)" },
+        { q: "Is the temperature stable and reaching the set point? (Yes / No / Fluctuating)" },
+        { q: "Is gas ignition working? (Yes / No / N/A)" },
+        { q: "Is the fryer oil heating correctly? (Yes / No / N/A)" },
+        { q: "Is the cold display counter cooling? (Yes / No)" },
+        { q: "Are the internal circulation fans operating? (Yes / No / N/A)" }
+    ],
+    18: [ // Fruit & Veg
+        { q: "Are the display lights and controls activating on power-up? (Yes / No)" },
+        { q: "Is the Teflon strip affixed and undamaged? (Yes / No — burnt / No — missing)" },
+        { q: "Is the hinge mechanism intact and operating smoothly? (Yes / No — broken / Stiff)" },
+        { q: "Is the heating wire exposed or visible outside its housing? (No — safe / Yes — STOP)", id: 'wire_exposed' },
+        { q: "Are the temperature dials or controls responding? (Yes / No)" },
+        { q: "Was the unit recently dropped or knocked? (Yes / No / Unknown)" },
+        { q: "Is the seal forming correctly on the product? (Yes / No / Partial)" }
+    ],
+    19: [ // HVAC
+        { q: "Is the unit producing airflow? (Yes / No)" },
+        { q: "Is the air reaching the set temperature — cooling or heating? (Yes / No / Partially)" },
+        { q: "Is there water dripping or leaking from the unit? (Yes / No)" },
+        { q: "Is there unusual noise from the indoor or outdoor unit? (Yes — describe / No)" }
+    ],
+    10: [ // Plumbing
+        { q: "What is the plumbing fault?\n1. Burst pipe\n2. Active leak\n3. Blocked drain\n4. Geyser issue\n5. Low pressure\n6. Valve failure\n7. Sewage backup\n8. Borehole / pump\n9. Other" },
+        { q: "Is there active water flow causing immediate damage or safety risk? (Yes / No)" },
+        { q: "What is the exact location of the fault?" }
+    ],
+    20: [ // Fire Safety
+        { q: "What is the fire safety fault?\n1. Extinguisher expired\n2. Extinguisher missing\n3. Smoke detector fault\n4. Sprinkler issue\n5. Fire door damaged\n6. Hose reel fault\n7. Emergency exit blocked\n8. Panel or alarm fault" },
+        { q: "Is there an active fire or immediate emergency? (Yes — evacuate now! / No)" },
+        { q: "Is the affected equipment tagged and out of service pending repair? (Yes / No)" }
+    ],
+    9: [ // Backup Power
+        { q: "Is the unit starting and running? (Yes / No / Starts then shuts down)" },
+        { q: "What is the current fuel level? (Full / Half / Low / Empty / N/A)" },
+        { q: "Is the battery charged and all connections secure? (Yes / No / Unknown)" },
+        { q: "Are there error codes or warning lights on the display? (Yes — describe / No)" },
+        { q: "Is the output power stable when running? (Yes / No / Not reaching equipment)" },
+        { q: "Is there a visible oil, fuel, or coolant leak? (Yes / No)" },
+        { q: "Is the automatic changeover activating during a power cut? (Yes / No / Not tested)" }
+    ],
+    11: [ // Building Civil Tiling
+        { q: "What type of defect is this?\n1. Roof leak 2. Ceiling damage 3. Wall crack 4. Floor / tiling 5. Door/lock 6. Window 7. Paving 8. Fence 9. Access control 10. Signage 11. Other" },
+        { q: "Is this a safety risk to staff or customers? (Yes / No)" },
+        { q: "How long has this defect been present? (Today / This week / Longer / Unknown)" }
+    ],
+    12: [ // Building Civil Roof
+        { q: "What type of defect is this?\n1. Roof leak 2. Ceiling damage 3. Wall crack 4. Floor / tiling 5. Door/lock 6. Window 7. Paving 8. Fence 9. Access control 10. Signage 11. Other" },
+        { q: "Is this a safety risk to staff or customers? (Yes / No)" },
+        { q: "How long has this defect been present? (Today / This week / Longer / Unknown)" }
+    ],
+    6: [ // Electrical - Lighting
+        { q: "Is the failure affecting 1. A single bulb 2. A section/aisle 3. The entire floor" },
+        { q: "Is there any flickering or buzzing heard? (Yes / No)" },
+        { q: "Is the emergency lighting functional? (Yes / No / N/A)" }
+    ],
+    7: [ // Electrical - Plug points
+        { q: "Is there visible damage to the socket (burnt/cracked)? (Yes / No)" },
+        { q: "Is the plug loose when inserted? (Yes / No)" },
+        { q: "How many sockets are affected?" }
+    ],
+    8: [ // Electrical - Switches / DB
+        { q: "Is there a burning smell near the board? (Yes / No)" },
+        { q: "Are any breakers hot to the touch? (Yes / No / Unknown)" },
+        { q: "Is there a loud humming or arcing sound? (Yes / No)" }
+    ],
+    21: [ // Pest & Hygiene
+        { q: "What is the issue? 1. Rodent sighting 2. Insect activity 3. Sanitizer station empty 4. Deep clean required 5. Other" },
+        { q: "Is this in a food-prep area? (Yes / No)" },
+        { q: "Is there an immediate health risk? (Yes / No)" }
+    ],
+    22: [ // General
+        { q: "Please describe the fault in detail." },
+        { q: "How long has this been an issue?" },
+        { q: "Are any other units or sections affected?" }
+    ]
+};
+
 const PHASES = {
     IDENTIFICATION: 'IDENTIFICATION',
     POWER_CHECK: 'POWER_CHECK',
@@ -109,152 +250,17 @@ function getNextQuestion(session) {
     // --- PHASE 4: CATEGORY DIAGNOSTIC ---
     if (state.phase === PHASES.CATEGORY_DIAGNOSTIC) {
         const cat = parseInt(session.data.category_id);
-        const subStep = state.step;
+        const flow = DIAGNOSTIC_FLOW[cat] || [{ q: "Please provide any additional details about the fault for this category." }];
 
-        const questions = {
-            1: [ // Upright fridge
-                "What is the current temperature reading on the display?",
-                "Is there airflow blowing from the vents at eye level? (Yes / No)",
-                "How many base fans underneath the unit are spinning? (All / Some / None)",
-                "Is there stagnant water visible near the base fans? (Yes / No)",
-                "Is there visible damage at the base — broken fan or burnt motor smell? (Yes / No)",
-                "Is this an AHT Freor unit? (Yes / No)",
-                "Are the fans on top of the AHT Freor unit spinning? (Yes / No)"
-            ],
-            2: [ // Cold room
-                "What is the current temperature reading on the display?",
-                "Are the blower fans inside the cold room spinning? (All / Some / None)",
-                "How many fans are spinning out of the total? (e.g. 2 of 4)",
-                "Is there ice build-up on the blower unit? (Front / Back / Both / No)",
-                "Is the compressor fan spinning on the exterior unit outside the building? (Yes / No / Not visible)"
-            ],
-            3: [ // Freezer room
-                "What is the current temperature reading on the display?",
-                "Are the blower fans inside the freezer room spinning? (All / Some / None)",
-                "How many fans are spinning out of the total? (e.g. 1 of 3)",
-                "Is there ice build-up on the blower unit? (Front / Back / Both / No)",
-                "Is the compressor fan spinning on the exterior unit? (Yes / No / Not visible)"
-            ],
-            4: [ // Island freezer
-                "What is the current temperature reading on the display?",
-                "Are the interior fans inside the island unit spinning? (All / Some — count / None)",
-                "Is there ice build-up on the interior evaporator? (Yes / No)",
-                "Is the compressor fan spinning on the exterior or base unit? (Yes / No / Not visible)"
-            ],
-            5: [ // Serve over
-                "What is the current temperature reading on the display?",
-                "Are the interior fans inside the serve-over spinning? (All / Some — count / None)",
-                "Is there ice build-up visible on any internal surface? (Yes — describe / No)",
-                "Is the compressor fan spinning on the exterior or base unit? (Yes / No / Not visible)"
-            ],
-            13: [ // Trolleys - Customer
-                "What is the fault?\n1. Wheels not rolling smoothly\n2. Wheel missing or broken\n3. Handle broken or loose\n4. Ear supports missing or broken\n5. Structural damage",
-                "How many units are affected? (1 / 2 to 5 / More than 5)",
-                "Are loose handles being stored for refitment — NOT discarded? (Yes / No)"
-            ],
-            14: [ // Trolleys - Baskets etc
-                "What is the fault?\n1. Wheels not rolling smoothly\n2. Wheel missing or broken\n3. Handle broken or loose\n4. Ear supports missing or broken\n5. Structural damage",
-                "How many units are affected? (1 / 2 to 5 / More than 5)",
-                "Are loose handles being stored for refitment — NOT discarded? (Yes / No)"
-            ],
-            15: [ // Bakery
-                "Are the moving parts of the equipment operating? (Yes / No)",
-                "Is the product feeding or loading correctly into the machine? (Yes / No / N/A)",
-                "Is the output consistent and within expected quality? (Yes / Inconsistent / No output)",
-                "Is there a jam, resistance, or overload indication? (Yes — describe / No)",
-                "Is the oven reaching and holding the set temperature? (Yes / No / N/A)",
-                "Is the oven fan rotating during operation? (Yes / No / N/A)"
-            ],
-            16: [ // Butchery
-                "Are all safety covers and blade guards in place and engaged? (Yes / No — specify which)",
-                "Are the blades or cutting mechanisms moving? (Yes / No / Intermittent)",
-                "Is the cutting or mincing output of acceptable quality? (Yes / Poor / No output)",
-                "Is there a blockage or product jam in the machine? (Yes / No)",
-                "Is there audible motor strain or unusual load sound? (Yes / No)",
-                "Is the vacuum sealing and suction functioning? (Yes / Partial / No / N/A)"
-            ],
-            17: [ // Deli / Pie shop
-                "Is the heating element or gas burner active and producing heat? (Yes / No)",
-                "Is the temperature stable and reaching the set point? (Yes / No / Fluctuating)",
-                "Is gas ignition working? (Yes / No / N/A)",
-                "Is the fryer oil heating correctly? (Yes / No / N/A)",
-                "Is the cold display counter cooling? (Yes / No)",
-                "Are the internal circulation fans operating? (Yes / No / N/A)"
-            ],
-            18: [ // Fruit & Veg
-                "Are the display lights and controls activating on power-up? (Yes / No)",
-                "Is the Teflon strip affixed and undamaged? (Yes / No — burnt / No — missing)",
-                "Is the hinge mechanism intact and operating smoothly? (Yes / No — broken / Stiff)",
-                "Is the heating wire exposed or visible outside its housing? (No — safe / Yes — STOP)",
-                "Are the temperature dials or controls responding? (Yes / No)",
-                "Was the unit recently dropped or knocked? (Yes / No / Unknown)",
-                "Is the seal forming correctly on the product? (Yes / No / Partial)"
-            ],
-            19: [ // HVAC
-                "Is the unit producing airflow? (Yes / No)",
-                "Is the air reaching the set temperature — cooling or heating? (Yes / No / Partially)",
-                "Is there water dripping or leaking from the unit? (Yes / No)",
-                "Is there unusual noise from the indoor or outdoor unit? (Yes — describe / No)"
-            ],
-            10: [ // Plumbing
-                "What is the plumbing fault?\n1. Burst pipe\n2. Active leak\n3. Blocked drain\n4. Geyser issue\n5. Low pressure\n6. Valve failure\n7. Sewage backup\n8. Borehole / pump\n9. Other",
-                "Is there active water flow causing immediate damage or safety risk? (Yes / No)",
-                "What is the exact location of the fault?"
-            ],
-            20: [ // Fire Safety
-                "What is the fire safety fault?\n1. Extinguisher expired\n2. Extinguisher missing\n3. Smoke detector fault\n4. Sprinkler issue\n5. Fire door damaged\n6. Hose reel fault\n7. Emergency exit blocked\n8. Panel or alarm fault",
-                "Is there an active fire or immediate emergency? (Yes — evacuate now! / No)",
-                "Is the affected equipment tagged and out of service pending repair? (Yes / No)"
-            ],
-            9: [ // Backup Power
-                "Is the unit starting and running? (Yes / No / Starts then shuts down)",
-                "What is the current fuel level? (Full / Half / Low / Empty / N/A)",
-                "Is the battery charged and all connections secure? (Yes / No / Unknown)",
-                "Are there error codes or warning lights on the display? (Yes — describe / No)",
-                "Is the output power stable when running? (Yes / No / Not reaching equipment)",
-                "Is there a visible oil, fuel, or coolant leak? (Yes / No)",
-                "Is the automatic changeover activating during a power cut? (Yes / No / Not tested)"
-            ],
-            11: [ // Building Civil Tiling
-                "What type of defect is this?\n1. Roof leak 2. Ceiling damage 3. Wall crack 4. Floor / tiling 5. Door/lock 6. Window 7. Paving 8. Fence 9. Access control 10. Signage 11. Other",
-                "Is this a safety risk to staff or customers? (Yes / No)",
-                "How long has this defect been present? (Today / This week / Longer / Unknown)"
-            ],
-            12: [ // Building Civil Roof
-                "What type of defect is this?\n1. Roof leak 2. Ceiling damage 3. Wall crack 4. Floor / tiling 5. Door/lock 6. Window 7. Paving 8. Fence 9. Access control 10. Signage 11. Other",
-                "Is this a safety risk to staff or customers? (Yes / No)",
-                "How long has this defect been present? (Today / This week / Longer / Unknown)"
-            ],
-            6: [ // Electrical - Lighting
-                "Is the failure affecting 1. A single bulb 2. A section/aisle 3. The entire floor",
-                "Is there any flickering or buzzing heard? (Yes / No)",
-                "Is the emergency lighting functional? (Yes / No / N/A)"
-            ],
-            7: [ // Electrical - Plug points
-                "Is there visible damage to the socket (burnt/cracked)? (Yes / No)",
-                "Is the plug loose when inserted? (Yes / No)",
-                "How many sockets are affected?"
-            ],
-            8: [ // Electrical - Switches / DB
-                "Is there a burning smell near the board? (Yes / No)",
-                "Are any breakers hot to the touch? (Yes / No / Unknown)",
-                "Is there a loud humming or arcing sound? (Yes / No)"
-            ],
-            21: [ // Pest & Hygiene
-                "What is the issue? 1. Rodent sighting 2. Insect activity 3. Sanitizer station empty 4. Deep clean required 5. Other",
-                "Is this in a food-prep area? (Yes / No)",
-                "Is there an immediate health risk? (Yes / No)"
-            ],
-            22: [ // General
-                "Please describe the fault in detail.",
-                "How long has this been an issue?",
-                "Are any other units or sections affected?"
-            ]
-        };
-
-        const catQs = questions[cat] || ["Please provide any additional details about the fault for this category."];
-        if (subStep <= catQs.length) {
-            return catQs[subStep - 1];
+        let subStep = state.step;
+        while (subStep <= flow.length) {
+            const currentQ = flow[subStep - 1];
+            if (currentQ.skip && currentQ.skip(session.data)) {
+                subStep++;
+                state.step = subStep;
+                continue;
+            }
+            return currentQ.q;
         }
     }
 
@@ -393,23 +399,37 @@ function handleInput(session, input) {
     // --- PHASE 4: CATEGORY DIAGNOSTIC ---
     else if (state.phase === PHASES.CATEGORY_DIAGNOSTIC) {
         if (!data.diagnostic) data.diagnostic = [];
+
+        const cat = parseInt(data.category_id);
+        const flow = DIAGNOSTIC_FLOW[cat] || [];
+
+        // Save answer if current question has an ID
+        const currentQ = flow[state.step - 1];
+        if (currentQ && currentQ.id) {
+            data[currentQ.id] = text;
+        }
+
         data.diagnostic.push(text);
         state.step++;
 
-        const cat = parseInt(data.category_id);
-        const questionsCount = {
-            1: 7, 2: 5, 3: 5, 4: 4, 5: 4, 13: 3, 14: 3, 15: 6, 16: 6, 17: 6, 18: 7, 19: 4, 10: 3, 20: 3, 9: 7, 11: 3, 12: 3, 6: 3, 7: 3, 8: 3, 21: 3, 22: 3
-        };
-        const maxSteps = questionsCount[cat] || 1;
+        // Check if we should skip the NEXT question(s)
+        while (state.step <= flow.length) {
+            const nextQ = flow[state.step - 1];
+            if (nextQ.skip && nextQ.skip(data)) {
+                state.step++;
+            } else {
+                break;
+            }
+        }
 
-        // Special handle for exposed wire in F&V
-        if (cat === 18 && state.step === 5 && (lowText.includes('yes') || lowText.includes('stop'))) {
+        // Check for emergency escalation in F&V (Exposed wire)
+        if (cat === 18 && data.wire_exposed && (data.wire_exposed.toLowerCase().includes('yes') || data.wire_exposed.toLowerCase().includes('stop'))) {
             data.priority = "EMERGENCY — EXPOSED WIRE";
             state.phase = PHASES.REPORT_CONFIRM;
             return null;
         }
 
-        if (state.step > maxSteps) {
+        if (state.step > flow.length) {
             state.phase = PHASES.MEDIA_PRIORITY;
             state.step = 1;
         }
