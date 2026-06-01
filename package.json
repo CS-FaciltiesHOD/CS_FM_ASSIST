@@ -3,9 +3,9 @@
   "version": "2.1.0",
   "description": "FM Assist — WhatsApp chatbot for FMCG facilities management fault logging",
   "scripts": {
-    "start": "node api/index.js",
+    "start": "node api/chat.js",
     "build": "echo 'Building...'",
-    "dev": "nodemon api/index.js"
+    "dev": "nodemon api/chat.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.24.3",

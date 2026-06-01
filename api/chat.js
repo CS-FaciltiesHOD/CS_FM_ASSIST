@@ -1,9 +1,7 @@
-// api/chat.js
 const { getLogicResponse } = require('./logic-engine');
 const { sendFaultNotification } = require('./notify');
-const { SYSTEM_PROMPT } = require('./knowledge-base');
-const Anthropic = require('@anthropic-ai/sdk');
 
+// Simple in-memory session store
 const sessions = {};
 function getSession(userId) {
     if (!sessions[userId]) {
@@ -45,27 +43,13 @@ async function handleCompletedReport(session, userId, reportText) {
     session.media = [];
 }
 
-async function getAIResponse(message, history) {
-    if (!process.env.ANTHROPIC_API_KEY) return "AI Brain error: Missing API Key.";
-    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
-    const response = await anthropic.messages.create({
-        model: "claude-3-5-sonnet-20240620",
-        max_tokens: 1024,
-        system: SYSTEM_PROMPT,
-        messages: history.map(h => ({ role: h.role, content: h.content }))
-    });
-
-    return response.content[0].text;
-}
-
 module.exports = async (req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-fm-secret');
 
     if (req.method === 'OPTIONS') return res.status(200).end();
-    if (req.method === 'GET') return res.status(200).json({ status: 'FM Assist API Online', brain: process.env.ANTHROPIC_API_KEY ? 'AI' : 'Logic Engine' });
+    if (req.method === 'GET') return res.status(200).json({ status: 'FM Assist API Online', brain: 'Logic Engine (Zero Cost)' });
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
     const secret = process.env.CHAT_WIDGET_SECRET || 'FM_ASSIST_SECRET';
@@ -74,19 +58,10 @@ module.exports = async (req, res) => {
     const { sessionId, message } = req.body;
     if (!sessionId || !message) return res.status(400).json({ error: 'Missing' });
 
-    const USE_AI_BRAIN = !!process.env.ANTHROPIC_API_KEY;
     const session = getSession(`web-${sessionId}`);
 
     try {
-        let reply;
-        if (USE_AI_BRAIN) {
-            // Include current message in temporary history for AI
-            const tempHistory = [...session.history, { role: 'user', content: message }];
-            reply = await getAIResponse(message, tempHistory);
-        } else {
-            reply = await getLogicResponse(`web-${sessionId}`, message, session);
-        }
-
+        const reply = await getLogicResponse(`web-${sessionId}`, message, session);
         session.history.push({ role: 'user', content: message });
         session.history.push({ role: 'assistant', content: reply });
 
