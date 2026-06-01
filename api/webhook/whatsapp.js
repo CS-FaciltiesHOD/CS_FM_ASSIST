@@ -1,6 +1,6 @@
 const axios = require('axios');
-const { getLogicResponse } = require('../logic-engine.js');
-const { sendFaultNotification } = require('../notify.js');
+const { getLogicResponse } = require('../logic-engine');
+const { sendFaultNotification } = require('../notify');
 
 const sessions = {};
 function getSession(userId) {
