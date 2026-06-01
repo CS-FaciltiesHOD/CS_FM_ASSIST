@@ -466,6 +466,32 @@ function generateReport(session) {
 }
 
 async function getLogicResponse(userId, userMessage, session) {
+    const lowMsg = userMessage.toLowerCase();
+
+    // --- INFO HANDLERS (Non-Fault Flow) ---
+    if (lowMsg.includes('category') || lowMsg.includes('categories')) {
+        let catList = "**Available Equipment Categories:**\n";
+        Object.entries(CATEGORIES).forEach(([id, name]) => catList += `${id}. ${name}\n`);
+        return catList + "\nWould you like to log a fault for one of these?";
+    }
+
+    if (lowMsg.includes('sla')) {
+        return `**FM Assist — Response SLAs:**
+1. **Emergency (1h):** Safety risk or full operation stopped.
+2. **Urgent (4h):** Major operational impact.
+3. **High (24h):** Significant fault, not critical.
+4. **Routine:** Low impact, next available slot.`;
+    }
+
+    if (lowMsg.includes('refrigeration checklist')) {
+        return `**Daily Refrigeration Checklist:**
+• Check temperature display (+5°C for fridges, -18°C for freezers).
+• Ensure blower fans are spinning freely.
+• Check for ice build-up on interior units.
+• Clear any blockages from base fans.
+• Report any unusual noises or leaks immediately.`;
+    }
+
     if (userMessage.toLowerCase() === 'reset' || userMessage.toLowerCase() === 'restart') {
         session.state = { phase: PHASES.IDENTIFICATION, step: 1 };
         session.data = {};
