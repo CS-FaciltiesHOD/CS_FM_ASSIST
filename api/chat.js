@@ -31,10 +31,22 @@ async function handleCompletedReport(session, userId, reportText) {
         reporter: getValue('Reported by') !== 'N/A' ? getValue('Reported by') : getValue('Reporter'),
         category: getValue('Category'),
         equipment: getValue('Equipment'),
+        brandModel: getValue('Brand / Model'),
+        assetTag: getValue('Asset tag'),
+        serialNumber: getValue('Serial number'),
         location: getValue('Location'),
         powerStatus: getValue('Power status'),
-        failingTo: getValue('Failing to'),
+        temperature: getValue('Temperature'),
+        fanStatus: getValue('Fan status'),
+        iceBuildUp: getValue('Ice build-up'),
+        compressorFan: getValue('Compressor fan'),
+        waterLeak: getValue('Water / leak'),
+        noiseVibration: getValue('Noise / vibration'),
+        visibleDamage: getValue('Visible damage'),
+        failureMode: getValue('Failing to'),
+        faultType: getValue('Fault type'),
         priority: getValue('Priority'),
+        technicianNeeded: getValue('Technician needed'),
         diagnostic: getValue('Other findings'),
         history: session.history
     };
@@ -65,7 +77,7 @@ module.exports = async (req, res) => {
         session.history.push({ role: 'user', content: message });
         session.history.push({ role: 'assistant', content: reply });
 
-        if (reply.includes('submitted successfully') || reply.includes('FM FAULT REPORT')) {
+        if (reply.includes('submitted successfully')) {
             try {
                 await handleCompletedReport(session, `web-${sessionId}`, reply);
             } catch (notifyErr) {
