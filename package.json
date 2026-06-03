@@ -1,5 +1,5 @@
 {
-  "name": "fm-assist-bot",
+  "name": "southafricassoul",
   "version": "2.1.0",
   "description": "FM Assist — WhatsApp chatbot for FMCG facilities management fault logging",
   "scripts": {
@@ -18,9 +18,9 @@
     "nodemailer": "^6.10.1"
   },
   "devDependencies": {
-    "@playwright/test": "^1.48.0",
+    "@playwright/test": "^1.60.0",
     "jest": "29.7.0",
     "nodemon": "^3.0.2",
-    "playwright": "^1.48.0"
+    "playwright": "^1.60.0"
   }
 }

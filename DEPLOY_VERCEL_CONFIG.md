@@ -24,4 +24,6 @@ After you have imported the repository into Vercel, you must set up the "Environ
 4. Vercel will give you a "CNAME" record. Copy this and add it to your domain's DNS settings (where you bought your domain).
 
 **Your new API address will be:**
-`https://www.southafricassoul.co.za`
+`https://www.southafricassoul.co.za` (Production)
+or
+`https://southafricassoul.vercel.app` (Preview)
