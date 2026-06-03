@@ -6,7 +6,7 @@ This repository contains the AI logic and API engine for the FM Assist Chatbot. 
 
 ### 1. GitHub Setup (Account B)
 - Push these files to your separate GitHub account dedicated to the chatbot.
-- In Vercel, link this repository to the same project as your main website.
+- In Vercel, link this repository to the project named `southafricassoul`.
 
 ### 2. Vercel Environment Variables
 Add the following keys to your Vercel Dashboard (Settings > Environment Variables):
