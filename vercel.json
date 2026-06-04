@@ -1,6 +1,5 @@
 {
   "version": 2,
-  "name": "southafricassoul",
   "rewrites": [
     { "source": "/api/chat", "destination": "/api/chat.js" },
     { "source": "/api/webhook/whatsapp", "destination": "/api/webhook/whatsapp.js" },
