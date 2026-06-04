@@ -1,6 +1,6 @@
 // api/logic-engine.js
 // FM ASSIST V2 — LOGIC ENGINE
-// Implements all layers from the FM Assist V2 Logic Engine Specification
+// Implements all 12 layers from the FM Assist V2 Logic Engine Specification
 // Refined for granular 1-by-1 interactions.
 
 const { createClient } = require('@supabase/supabase-js');
@@ -450,7 +450,7 @@ const ASSET_PROFILES = {
     foodSafety: true,
     sla: { emergency: 1, urgent: 4, high: 24, routine: null }
   },
-  'Hygiene Dispenser': {
+  'Hygiene Station': {
     category: 'Pest & Hygiene',
     diagnosticProfile: 'PEST',
     criticality: 'Routine',
@@ -492,7 +492,7 @@ const CATEGORY_EQUIPMENT = {
   'Fruit & Veg':      ['Sealer','Wrapper'],
   'HVAC':             ['Aircon Unit','General HVAC'],
   'Fire Safety':      ['Fire Extinguisher','Smoke Detector','Fire Door','Hose Reel','Fire Panel / Alarm'],
-  'Pest & Hygiene':   ['Rodent Activity','Insect Infestation','Hygiene Dispenser','General Pest'],
+  'Pest & Hygiene':   ['Rodent Activity','Insect Infestation','Hygiene Station','General Pest'],
   'General':          ['General Equipment / Other'],
 };
 
@@ -552,97 +552,187 @@ function calculatePriority(state) {
 // LAYER 6 — CATEGORY DIAGNOSTIC ENGINE
 // ─────────────────────────────────────────────────────────────────────────────
 const DIAGNOSTIC_QUESTIONS = {
+
   REFRIG_UPRIGHT: [
     { id: 'R_TEMP',    text: 'What is the current temperature reading on the display?', type: 'number' },
     { id: 'R_ALARM',   text: 'Is there an active alarm or warning on the unit?',         type: 'options', options: ['Yes','No'] },
     { id: 'R_VENT',    text: 'Is there airflow blowing from the vents at eye level?',    type: 'options', options: ['Yes','No'] },
     { id: 'R_BASEFAN', text: 'How many base fans underneath the unit are spinning?',     type: 'options', options: ['All spinning','Some spinning — enter count','None spinning'] },
+    { id: 'R_FANCOUNT',text: 'How many fans are spinning out of the total installed?',  type: 'text',    conditional: (d) => d.R_BASEFAN === 'Some spinning — enter count' },
     { id: 'R_WATER',   text: 'Is there stagnant water visible near the base fans?',     type: 'options', options: ['Yes','No'] },
     { id: 'R_DAMAGE',  text: 'Is there visible damage at the base — broken fan or burnt motor smell?', type: 'options', options: ['Yes — describe','No'] },
+    { id: 'R_DOORSEAL',text: 'Are the door seals closing and sealing correctly?',       type: 'options', options: ['Yes','No — damaged','No — not closing fully'] },
+    { id: 'R_PRODTEMP',text: 'Is product temperature acceptable?',                      type: 'options', options: ['Yes','No — product warm','Unknown'] },
     { id: 'R_AHT',     text: 'Is this an AHT Freor unit?',                              type: 'options', options: ['Yes','No'] },
     { id: 'R_AHTFAN',  text: 'Are the fans on top of the AHT Freor unit spinning?',    type: 'options', options: ['Yes','No'], conditional: (d) => d.R_AHT === 'Yes' },
   ],
+
   REFRIG_COLDROOM: [
     { id: 'C_TEMP',    text: 'What is the current temperature reading on the display?', type: 'number' },
     { id: 'C_ALARM',   text: 'Is there an active alarm or warning on the unit?',         type: 'options', options: ['Yes','No'] },
     { id: 'C_FANS',    text: 'Are the blower fans inside the cold room spinning?',       type: 'options', options: ['All spinning','Some spinning','None spinning'] },
+    { id: 'C_FANCOUNT',text: 'How many fans are spinning out of the total installed? (e.g. 2 of 4)', type: 'text', conditional: (d) => d.C_FANS === 'Some spinning' },
     { id: 'C_ICE',     text: 'Is there ice build-up on the blower unit?',               type: 'options', options: ['Yes — front','Yes — back','Yes — both','No'] },
+    { id: 'C_DOOR',    text: 'Are the cold room door seals intact and closing properly?', type: 'options', options: ['Yes','No — damaged','No — not closing'] },
     { id: 'C_COMP',    text: 'Is the compressor fan spinning on the exterior unit?',    type: 'options', options: ['Yes','No','Not visible'] },
+    { id: 'C_PRODTEMP',text: 'Is product temperature acceptable?',                      type: 'options', options: ['Yes','No — product warm','Unknown'] },
+    { id: 'C_FOODRISK',text: 'Is stock at risk due to this fault?',                     type: 'options', options: ['Yes','No','Unknown'] },
   ],
+
   REFRIG_FREEZER: [
     { id: 'F_TEMP',    text: 'What is the current temperature reading on the display?', type: 'number' },
     { id: 'F_ALARM',   text: 'Is there an active alarm or warning on the unit?',         type: 'options', options: ['Yes','No'] },
     { id: 'F_FANS',    text: 'Are the blower fans inside the freezer room spinning?',   type: 'options', options: ['All spinning','Some spinning','None spinning'] },
+    { id: 'F_FANCOUNT',text: 'How many fans are spinning out of the total installed? (e.g. 1 of 3)', type: 'text', conditional: (d) => d.F_FANS === 'Some spinning' },
     { id: 'F_ICE',     text: 'Is there ice build-up on the blower unit?',               type: 'options', options: ['Yes — front','Yes — back','Yes — both','No'] },
+    { id: 'F_DOOR',    text: 'Are the freezer room door seals intact and closing properly?', type: 'options', options: ['Yes','No — damaged','No — not closing'] },
     { id: 'F_COMP',    text: 'Is the compressor fan spinning on the exterior unit?',    type: 'options', options: ['Yes','No','Not visible'] },
+    { id: 'F_PRODTEMP',text: 'Is frozen stock at risk due to this fault?',              type: 'options', options: ['Yes','No','Unknown'] },
   ],
+
   REFRIG_ISLAND: [
     { id: 'I_TEMP',    text: 'What is the current temperature reading on the display?', type: 'number' },
     { id: 'I_ALARM',   text: 'Is there an active alarm or warning on the unit?',         type: 'options', options: ['Yes','No'] },
-    { id: 'I_FANS',    text: 'Are the interior fans inside the island unit spinning?',  type: 'options', options: ['All spinning','Some spinning','None spinning'] },
+    { id: 'I_FANS',    text: 'Are the interior fans inside the island unit spinning?',  type: 'options', options: ['All spinning','Some spinning — enter count','None spinning'] },
+    { id: 'I_FANCOUNT',text: 'How many fans are spinning out of the total?',            type: 'text',    conditional: (d) => d.I_FANS === 'Some spinning — enter count' },
     { id: 'I_ICE',     text: 'Is there ice build-up on the interior evaporator?',       type: 'options', options: ['Yes','No'] },
     { id: 'I_COMP',    text: 'Is the compressor fan spinning on the exterior or base unit?', type: 'options', options: ['Yes','No','Not visible'] },
+    { id: 'I_FOODRISK',text: 'Is frozen stock at risk due to this fault?',              type: 'options', options: ['Yes','No','Unknown'] },
   ],
+
   REFRIG_SERVEOVER: [
     { id: 'S_TEMP',    text: 'What is the current temperature reading on the display?', type: 'number' },
     { id: 'S_ALARM',   text: 'Is there an active alarm or warning on the unit?',         type: 'options', options: ['Yes','No'] },
-    { id: 'S_FANS',    text: 'Are the interior fans inside the serve-over spinning?',   type: 'options', options: ['All spinning','Some spinning','None spinning'] },
+    { id: 'S_FANS',    text: 'Are the interior fans inside the serve-over spinning?',   type: 'options', options: ['All spinning','Some spinning — enter count','None spinning'] },
+    { id: 'S_FANCOUNT',text: 'How many fans are spinning out of the total?',            type: 'text',    conditional: (d) => d.S_FANS === 'Some spinning — enter count' },
     { id: 'S_ICE',     text: 'Is there ice build-up on any internal surface?',          type: 'options', options: ['Yes — describe location','No'] },
     { id: 'S_COMP',    text: 'Is the compressor fan spinning on the exterior or base unit?', type: 'options', options: ['Yes','No','Not visible'] },
+    { id: 'S_FOODRISK',text: 'Is chilled product at risk due to this fault?',           type: 'options', options: ['Yes','No','Unknown'] },
   ],
+
   ELECTRICAL_LIGHTING: [
     { id: 'EL_AREA',   text: 'Which area or circuit is affected?', type: 'text' },
-    { id: 'EL_BREAK',  text: 'Is the circuit breaker at the DB board tripped for this area?', type: 'options', options: ['Yes','No','Not checked'] },
+    { id: 'EL_BREAK',  text: 'Is the circuit breaker at the DB board tripped for this area?', type: 'options', options: ['Yes — tripped','No — all breakers on','Not checked'] },
+    { id: 'EL_DAMAGE', text: 'Is there visible damage to fittings, wiring, or the light itself?', type: 'options', options: ['Yes — describe','No'] },
+    { id: 'EL_FLICKER',text: 'Are the lights flickering or intermittently cutting out?', type: 'options', options: ['Yes','No'] },
+    { id: 'EL_SMELL',  text: 'Is there a burning smell from any fitting?',               type: 'options', options: ['Yes — EMERGENCY','No'] },
   ],
+
   ELECTRICAL_SOCKETS: [
     { id: 'ES_AREA',   text: 'Which socket or area is affected?', type: 'text' },
-    { id: 'ES_BREAK',  text: 'Is the circuit breaker at the DB board tripped?', type: 'options', options: ['Yes','No','Not checked'] },
+    { id: 'ES_BREAK',  text: 'Is the circuit breaker at the DB board tripped?', type: 'options', options: ['Yes — tripped','No','Not checked'] },
+    { id: 'ES_DAMAGE', text: 'Is there visible damage to the socket — burn marks, cracks, or exposed parts?', type: 'options', options: ['Yes — describe','No'] },
+    { id: 'ES_SPARK',  text: 'Is the socket sparking?',           type: 'options', options: ['Yes — EMERGENCY','No'] },
+    { id: 'ES_SMELL',  text: 'Is there a burning smell from this socket?', type: 'options', options: ['Yes — EMERGENCY','No'] },
   ],
+
   ELECTRICAL_DB: [
-    { id: 'ED_TRIPPED',text: 'Is a breaker at the DB board tripped or off?',            type: 'options', options: ['Yes','No','Multiple'] },
+    { id: 'ED_TRIPPED',text: 'Is a breaker at the DB board tripped or off?',            type: 'options', options: ['Yes','No','Multiple breakers tripped'] },
     { id: 'ED_CIRCUIT',text: 'Which circuit or label is the tripped breaker for?',     type: 'text' },
+    { id: 'ED_DAMAGE', text: 'Is there visible damage inside the DB board — burn marks, scorch, or exposed wiring?', type: 'options', options: ['Yes — EMERGENCY','No'] },
+    { id: 'ED_SPARK',  text: 'Is there any sparking or arcing visible at the board?',  type: 'options', options: ['Yes — EMERGENCY','No'] },
+    { id: 'ED_SMELL',  text: 'Is there a burning smell from the DB board area?',        type: 'options', options: ['Yes — EMERGENCY','No'] },
   ],
+
   BACKUP_GENERATOR: [
-    { id: 'G_START',   text: 'Is the generator starting and running?',                  type: 'options', options: ['Yes','No','Starts then shuts down'] },
-    { id: 'G_FUEL',    text: 'What is the current fuel level?',                          type: 'options', options: ['Full','Three quarter','Half','Low','Empty'] },
+    { id: 'G_START',   text: 'Is the generator starting and running?',                  type: 'options', options: ['Yes — running normally','No — will not start','Starts then shuts down'] },
+    { id: 'G_FUEL',    text: 'What is the current fuel level?',                          type: 'options', options: ['Full','Three quarter','Half','Low','Empty — refuel immediately'] },
+    { id: 'G_BATTERY', text: 'Is the battery charged and all connections secure?',      type: 'options', options: ['Yes','No — battery low','No — loose connection visible','Unknown'] },
+    { id: 'G_ERRORS',  text: 'Are there error codes or warning lights on the display?', type: 'options', options: ['Yes — describe code','No'] },
+    { id: 'G_OUTPUT',  text: 'Is the output power stable when the generator is running?', type: 'options', options: ['Yes','No — fluctuating','Not reaching connected equipment'] },
+    { id: 'G_LEAK',    text: 'Is there a visible oil, fuel, or coolant leak?',           type: 'options', options: ['Yes','No'] },
+    { id: 'G_TRANSFER',text: 'Is the automatic transfer switch (changeover) activating correctly during a power cut?', type: 'options', options: ['Yes','No','Not tested'] },
   ],
+
+  BACKUP_UPS: [
+    { id: 'U_STATUS',  text: 'What is the UPS status indicator showing?',               type: 'options', options: ['Normal — green','Warning — amber','Fault — red','No display'] },
+    { id: 'U_BATTERY', text: 'Is the battery charged and healthy?',                     type: 'options', options: ['Yes','No — low','Unknown'] },
+    { id: 'U_OUTPUT',  text: 'Is the UPS providing stable output power?',               type: 'options', options: ['Yes','No — dropping','Not powering equipment'] },
+    { id: 'U_ERRORS',  text: 'Are there any alarm beeps or error codes?',               type: 'options', options: ['Yes — describe','No'] },
+  ],
+
   PLUMBING_GENERAL: [
-    { id: 'P_TYPE',    text: 'What is the plumbing fault?',                              type: 'options', options: ['Burst pipe','Active leak','Blocked drain','Geyser','Pressure','Valve','Sewage','Pump','Other'] },
-    { id: 'P_ACTIVE',  text: 'Is there active water flow causing immediate damage?', type: 'options', options: ['Yes — isolated','Yes — NOT isolated','No'] },
+    { id: 'P_TYPE',    text: 'What is the plumbing fault?',                              type: 'options', options: ['Burst pipe','Active leak','Blocked drain','Geyser / water heater fault','Low water pressure','Valve failure','Sewage backup','Borehole / pump fault','Other'] },
+    { id: 'P_ACTIVE',  text: 'Is there active water flow causing immediate damage or a safety risk?', type: 'options', options: ['Yes — water isolated already','Yes — water NOT yet isolated','No'] },
+    { id: 'P_SEVERITY',text: 'How severe is the leak?',                                 type: 'options', options: ['Drip','Steady flow','Heavy flow','Burst — major flow'] },
     { id: 'P_LOCATION',text: 'What is the exact location of the fault?',               type: 'text' },
+    { id: 'P_DAMAGE',  text: 'Has the water caused damage to property, stock, or electrical equipment?', type: 'options', options: ['Yes','No','Unknown'] },
   ],
+
+  BUILDING_GENERAL: [
+    { id: 'BC_TYPE',   text: 'What type of defect is this?',                            type: 'options', options: ['Roof leak','Ceiling damage','Wall crack','Floor / tiling','Door or lock fault','Window damage','Paving','Perimeter fence','Access control','Signage','Other'] },
+    { id: 'BC_SAFETY', text: 'Is this defect a safety risk to staff or customers?',    type: 'options', options: ['Yes — immediate risk','Yes — potential risk','No'] },
+    { id: 'BC_EXTENT', text: 'How extensive is the damage?',                            type: 'options', options: ['Minor — small area','Moderate — contained','Significant — large area','Severe'] },
+    { id: 'BC_DURATION',text: 'How long has this defect been present?',                type: 'options', options: ['Noticed today','This week','More than a week','Unknown'] },
+    { id: 'BC_WEATHER',text: 'Is this damage weather-related?',                         type: 'options', options: ['Yes','No','Unknown'] },
+  ],
+
   TROLLEY: [
-    { id: 'T_FAULT',   text: 'What is the primary fault?',               type: 'options', options: ['Wheels','Handle','Ear supports','Structural'] },
+    { id: 'T_FAULT',   text: 'What is the primary fault? Select all that apply.',               type: 'options', options: ['Wheels not rolling smoothly','Wheel missing or broken','Handle broken or loose','Ear supports missing or broken','Structural damage'] },
     { id: 'T_COUNT',   text: 'How many units are affected?',                            type: 'options', options: ['1','2 to 5','More than 5'] },
+    { id: 'T_HANDLES', text: 'Are loose handles being stored for refitment — NOT discarded?', type: 'options', options: ['Yes — stored correctly','No — will action immediately','No handles involved'] },
   ],
+
   BAKERY: [
     { id: 'B_MOVING',  text: 'Are the moving parts of the equipment operating?',        type: 'options', options: ['Yes','No'] },
-    { id: 'B_OVENTEMP',text: 'Is the oven reaching and holding the set temperature?',  type: 'options', options: ['Yes','No','N/A'] },
+    { id: 'B_FEED',    text: 'Is the product feeding or loading correctly into the machine?', type: 'options', options: ['Yes','No','Not applicable'] },
+    { id: 'B_OUTPUT',  text: 'Is the output consistent and within expected quality?',   type: 'options', options: ['Yes','Inconsistent','No output'] },
+    { id: 'B_JAM',     text: 'Is there a jam, resistance, or overload indication?',     type: 'options', options: ['Yes — describe','No'] },
+    { id: 'B_OVENTEMP',text: 'Is the oven reaching and holding the set temperature?',  type: 'options', options: ['Yes','No','Partial','Not applicable'] },
+    { id: 'B_OVENFAN', text: 'Is the oven fan rotating during operation?',              type: 'options', options: ['Yes','No','Not applicable'] },
+    { id: 'B_HEATING', text: 'Is the heating element or burner active?',                type: 'options', options: ['Yes','No'] },
   ],
+
   BUTCHERY: [
-    { id: 'BU_GUARDS', text: 'Are all safety covers and blade guards in place?', type: 'options', options: ['Yes','No'] },
-    { id: 'BU_BLADES', text: 'Are the blades or cutting mechanisms moving?',            type: 'options', options: ['Yes','No','Intermittent'] },
+    { id: 'BU_GUARDS', text: 'Are all safety covers and blade guards in place and engaged?', type: 'options', options: ['Yes — all in place','No — specify which is missing'] },
+    { id: 'BU_BLADES', text: 'Are the blades or cutting mechanisms moving?',            type: 'options', options: ['Yes','No','Intermittently'] },
+    { id: 'BU_QUALITY',text: 'Is the cutting or mincing output of acceptable quality?', type: 'options', options: ['Yes','Poor — inconsistent','No output'] },
+    { id: 'BU_BLOCK',  text: 'Is there a blockage or product jam in the machine?',     type: 'options', options: ['Yes','No'] },
+    { id: 'BU_MOTOR',  text: 'Is there audible motor strain or unusual load sound?',   type: 'options', options: ['Yes','No'] },
+    { id: 'BU_VACUUM', text: 'Is the vacuum sealing and suction functioning?',          type: 'options', options: ['Yes','Partial — weak suction','No','Not applicable'] },
   ],
+
   DELI: [
-    { id: 'D_HEATING', text: 'Is the heating element or gas burner active?', type: 'options', options: ['Yes','No'] },
-    { id: 'D_TEMP',    text: 'Is the temperature stable and reaching the set point?',   type: 'options', options: ['Yes','No','Fluctuating'] },
+    { id: 'D_HEATING', text: 'Is the heating element or gas burner active and producing heat?', type: 'options', options: ['Yes','No'] },
+    { id: 'D_TEMP',    text: 'Is the temperature stable and reaching the set point?',   type: 'options', options: ['Yes','No — not reaching target','Fluctuating'] },
+    { id: 'D_GAS',     text: 'Is gas ignition working?',                                type: 'options', options: ['Yes','No','Not applicable — electric unit'] },
+    { id: 'D_OIL',     text: 'Is the fryer oil heating correctly?',                     type: 'options', options: ['Yes','No','Not applicable'] },
+    { id: 'D_DISPLAY', text: 'Is the cold display counter cooling?',                    type: 'options', options: ['Yes','No','Not applicable'] },
+    { id: 'D_FANS',    text: 'Are the internal circulation fans operating?',             type: 'options', options: ['Yes','No','Not applicable'] },
   ],
+
   FV: [
-    { id: 'FV_WIRE',   text: 'Is the heating wire exposed or visible outside its housing?', type: 'options', options: ['No','Yes — EMERGENCY'] },
-    { id: 'FV_SEAL',   text: 'Is the seal forming correctly on the product?',           type: 'options', options: ['Yes','No','Partial'] },
+    { id: 'FV_DISPLAY',text: 'Are the display lights and controls activating on power-up?', type: 'options', options: ['Yes','No'] },
+    { id: 'FV_TEFLON', text: 'Is the Teflon strip affixed and undamaged — not burnt or peeling?', type: 'options', options: ['Yes — intact','No — burnt','No — missing or peeling'] },
+    { id: 'FV_HINGE',  text: 'Is the hinge mechanism intact and operating smoothly?',   type: 'options', options: ['Yes','No — broken','Stiff'] },
+    { id: 'FV_WIRE',   text: 'Is the heating wire exposed or visible outside its housing?', type: 'options', options: ['No — safe','Yes — EMERGENCY STOP — do not operate'] },
+    { id: 'FV_DIALS',  text: 'Are the temperature dials or controls responding?',       type: 'options', options: ['Yes','No'] },
+    { id: 'FV_DROPPED',text: 'Was the unit recently dropped or knocked?',               type: 'options', options: ['Yes','No','Unknown'] },
+    { id: 'FV_SEAL',   text: 'Is the seal forming correctly on the product?',           type: 'options', options: ['Yes','No — not bonding','Partial seal only'] },
   ],
+
   HVAC: [
     { id: 'H_AIRFLOW', text: 'Is the unit producing airflow?',                          type: 'options', options: ['Yes','No'] },
-    { id: 'H_TEMP',    text: 'Is the air reaching the set temperature?', type: 'options', options: ['Yes','No','Partially'] },
+    { id: 'H_TEMP',    text: 'Is the air reaching the set temperature — cooling or heating?', type: 'options', options: ['Yes','No','Partially'] },
+    { id: 'H_DRIP',    text: 'Is there water dripping or leaking from the unit?',       type: 'options', options: ['Yes','No'] },
+    { id: 'H_NOISE',   text: 'Is there unusual noise from the indoor or outdoor unit?', type: 'options', options: ['Yes — describe','No'] },
+    { id: 'H_AREA',    text: 'Which area does this unit serve?',                         type: 'text' },
   ],
+
   FIRE: [
-    { id: 'FS_TYPE',   text: 'What is the fire safety fault?',                          type: 'options', options: ['Extinguisher','Smoke detector','Sprinkler','Fire door','Hose reel','Alarm'] },
-    { id: 'FS_ACTIVE', text: 'Is there an active fire or immediate emergency?',         type: 'options', options: ['Yes','No'] },
+    { id: 'FS_TYPE',   text: 'What is the fire safety fault?',                          type: 'options', options: ['Extinguisher expired','Extinguisher missing','Smoke detector fault','Sprinkler issue','Fire door damaged','Hose reel fault','Emergency exit blocked','Panel or alarm fault'] },
+    { id: 'FS_ACTIVE', text: 'Is there an active fire or immediate emergency?',         type: 'options', options: ['Yes — evacuate and call 10111 immediately','No'] },
+    { id: 'FS_COMPLY', text: 'What is the compliance status of this asset?',            type: 'options', options: ['In date','Overdue','Unknown'] },
+    { id: 'FS_TAGOUT', text: 'Is the affected asset tagged and out of service pending repair?', type: 'options', options: ['Yes — tagged out','No — will action now'] },
+    { id: 'FS_COVER',  text: 'Is alternative protection in place while this asset is out of service?', type: 'options', options: ['Yes','No','Arranging now'] },
   ],
+
   PEST: [
-    { id: 'PEST_TYPE', text: 'What is the issue?', type: 'options', options: ['Rodent','Insects','Hygiene station','Other'] },
-    { id: 'PEST_LOCATION', text: 'Is this in a food-prep area?', type: 'options', options: ['Yes','No'] },
+    { id: 'PEST_TYPE', text: 'What is the issue?', type: 'options', options: ['Rodent sighting', 'Insect activity', 'Sanitizer station empty', 'Deep clean required', 'Other'] },
+    { id: 'PEST_AREA', text: 'Is this in a food-prep area?', type: 'options', options: ['Yes','No'] },
+    { id: 'PEST_RISK', text: 'Is there an immediate health risk?', type: 'options', options: ['Yes','No'] },
   ],
+
   GENERAL: [
     { id: 'GEN_DESC', text: 'Please describe the fault in detail.', type: 'text' }
   ]
@@ -682,7 +772,8 @@ function generateTicketId() {
 
 function determineOutcome(state) {
   const values = Object.values(state.diagnosticResults || {});
-  const hasNo = values.some(v => v === 'No' || v === 'None spinning');
+  const hasNo = values.some(v => v === 'No' || v === 'None spinning' || (typeof v === 'string' && (v.startsWith('No') || v.includes('None') || v.includes('not'))));
+
   if (state.emergencyType && state.emergencyType !== 'None') return 'Emergency Escalation';
   if (state.powerStatus === 'Electrical fault escalated') return 'Technician Required';
   if (hasNo) return 'Technician Required';
@@ -816,7 +907,9 @@ function handleInput(session, input) {
   const state = session.state;
 
   // Global Emergency Override
-  if (detectEmergency(text)) {
+  // Fires at any point EXCEPT when we are explicitly asking about burning smell in the mechanical check
+  const isMechanicalBurningCheck = state.phase === PHASES.UNIVERSAL_ENGINE && state.step === 'MECH_BURN';
+  if (detectEmergency(text) && !isMechanicalBurningCheck) {
     data.safetyRisk = 'Emergency Triggered';
     data.emergencyType = text;
     data.priority = calculatePriority(data);
@@ -914,11 +1007,10 @@ function handleInput(session, input) {
       data.mechanicalResults["Burning Smell"] = text;
       if (lowText.includes('yes')) {
          data.emergencyType = 'Burning Smell';
+         // Set emergency priority but CONTINUE with remaining questions as per user request
          data.priority = calculatePriority(data);
-         state.phase = PHASES.REPORT_CONFIRM;
-      } else {
-         state.step = 'MECH_DMG';
       }
+      state.step = 'MECH_DMG';
     }
     else if (state.step === 'MECH_DMG') {
       data.mechanicalResults["Visible Damage"] = text;
@@ -1136,4 +1228,14 @@ async function getLogicResponse(userId, userMessage, session) {
   return getNextQuestion(session);
 }
 
-module.exports = { getLogicResponse, PHASES };
+module.exports = {
+  getLogicResponse,
+  PHASES,
+  ASSET_PROFILES,
+  CATEGORY_EQUIPMENT,
+  DIAGNOSTIC_QUESTIONS,
+  FOOD_SAFETY_QUESTIONS,
+  calculatePriority,
+  detectEmergency,
+  determineOutcome
+};
