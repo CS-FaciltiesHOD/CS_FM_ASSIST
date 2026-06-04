@@ -1,526 +1,1139 @@
-// logic-engine.js
-// FM Assist — Deterministic Logic Engine
-// This replaces the AI brain with a structured state machine based on the knowledge base.
+// api/logic-engine.js
+// FM ASSIST V2 — LOGIC ENGINE
+// Implements all layers from the FM Assist V2 Logic Engine Specification
+// Refined for granular 1-by-1 interactions.
 
-const CATEGORIES = {
-    1: "Refrigeration — Upright fridge",
-    2: "Refrigeration — Cold room",
-    3: "Refrigeration — Freezer room",
-    4: "Refrigeration — Island freezer",
-    5: "Refrigeration — Serve over (cold display)",
-    6: "Electrical — Lighting",
-    7: "Electrical — Plug points / sockets",
-    8: "Electrical — Switches / DB board",
-    9: "Backup power — Generator / UPS",
-    10: "Plumbing",
-    11: "Building & Civil — Tiling / fixtures / fittings",
-    12: "Building & Civil — Roof / ceiling / structure",
-    13: "Trolleys — Customer trolleys",
-    14: "Trolleys — Basket / pallet / flatbed",
-    15: "Bakery equipment",
-    16: "Butchery equipment",
-    17: "Deli / Pie shop equipment",
-    18: "Fruit & Veg equipment — sealers / wrappers",
-    19: "HVAC / Aircon",
-    20: "Fire safety equipment",
-    21: "Pest & Hygiene",
-    22: "General / Other"
+const { createClient } = require('@supabase/supabase-js');
+
+const supabase = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
+  ? createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
+  : null;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LAYER 3 — ASSET CLASSIFICATION TABLE
+// ─────────────────────────────────────────────────────────────────────────────
+const ASSET_PROFILES = {
+  'Upright Fridge': {
+    category: 'Refrigeration',
+    diagnosticProfile: 'REFRIG_UPRIGHT',
+    criticality: 'Important',
+    requiresPower: true,
+    provider: 'Cold Chain',
+    foodSafety: true,
+    targetTemp: { min: 0, max: 5, unit: '°C' },
+    sla: { emergency: 1, urgent: 4, high: 24, routine: null }
+  },
+  'Cold Room': {
+    category: 'Refrigeration',
+    diagnosticProfile: 'REFRIG_COLDROOM',
+    criticality: 'Critical',
+    requiresPower: true,
+    provider: 'Cold Chain',
+    foodSafety: true,
+    powerPath: 'A',
+    targetTemp: { min: 1, max: 5, unit: '°C' },
+    sla: { emergency: 1, urgent: 4, high: 24, routine: null }
+  },
+  'Freezer Room': {
+    category: 'Refrigeration',
+    diagnosticProfile: 'REFRIG_FREEZER',
+    criticality: 'Critical',
+    requiresPower: true,
+    provider: 'Cold Chain',
+    foodSafety: true,
+    powerPath: 'A',
+    targetTemp: { min: -25, max: -18, unit: '°C' },
+    sla: { emergency: 1, urgent: 4, high: 24, routine: null }
+  },
+  'Island Freezer': {
+    category: 'Refrigeration',
+    diagnosticProfile: 'REFRIG_ISLAND',
+    criticality: 'Important',
+    requiresPower: true,
+    provider: 'Cold Chain',
+    foodSafety: true,
+    powerPath: 'C',
+    targetTemp: { min: -25, max: -18, unit: '°C' },
+    sla: { emergency: 1, urgent: 4, high: 24, routine: null }
+  },
+  'Serve Over': {
+    category: 'Refrigeration',
+    diagnosticProfile: 'REFRIG_SERVEOVER',
+    criticality: 'Important',
+    requiresPower: true,
+    provider: 'Cold Chain',
+    foodSafety: true,
+    powerPath: 'B',
+    targetTemp: { min: 0, max: 5, unit: '°C' },
+    sla: { emergency: 1, urgent: 4, high: 24, routine: null }
+  },
+  'Lighting': {
+    category: 'Electrical',
+    diagnosticProfile: 'ELECTRICAL_LIGHTING',
+    criticality: 'Routine',
+    requiresPower: true,
+    provider: 'Electrical Contractor',
+    foodSafety: false,
+    powerPath: 'D',
+    sla: { emergency: 1, urgent: 4, high: 24, routine: null }
+  },
+  'Plug Points / Sockets': {
+    category: 'Electrical',
+    diagnosticProfile: 'ELECTRICAL_SOCKETS',
+    criticality: 'Important',
+    requiresPower: true,
+    provider: 'Electrical Contractor',
+    foodSafety: false,
+    powerPath: 'D',
+    sla: { emergency: 1, urgent: 4, high: 24, routine: null }
+  },
+  'DB Board / Switches': {
+    category: 'Electrical',
+    diagnosticProfile: 'ELECTRICAL_DB',
+    criticality: 'Critical',
+    requiresPower: true,
+    provider: 'Electrical Contractor',
+    foodSafety: false,
+    powerPath: 'D',
+    sla: { emergency: 1, urgent: 4, high: 24, routine: null }
+  },
+  'Generator': {
+    category: 'Backup Power',
+    diagnosticProfile: 'BACKUP_GENERATOR',
+    criticality: 'Critical',
+    requiresPower: false,
+    provider: 'Generator Contractor',
+    foodSafety: false,
+    sla: { emergency: 1, urgent: 4, high: 24, routine: null }
+  },
+  'UPS': {
+    category: 'Backup Power',
+    diagnosticProfile: 'BACKUP_UPS',
+    criticality: 'Critical',
+    requiresPower: false,
+    provider: 'Generator Contractor',
+    foodSafety: false,
+    sla: { emergency: 1, urgent: 4, high: 24, routine: null }
+  },
+  'Burst Pipe': {
+    category: 'Plumbing',
+    diagnosticProfile: 'PLUMBING_GENERAL',
+    criticality: 'Critical',
+    requiresPower: false,
+    provider: 'Plumbing Services',
+    foodSafety: false,
+    sla: { emergency: 1, urgent: 4, high: 24, routine: null }
+  },
+  'Blocked Drain': {
+    category: 'Plumbing',
+    diagnosticProfile: 'PLUMBING_GENERAL',
+    criticality: 'Important',
+    requiresPower: false,
+    provider: 'Plumbing Services',
+    foodSafety: false,
+    sla: { emergency: 1, urgent: 4, high: 24, routine: null }
+  },
+  'Geyser / Water Heater': {
+    category: 'Plumbing',
+    diagnosticProfile: 'PLUMBING_GENERAL',
+    criticality: 'Important',
+    requiresPower: false,
+    provider: 'Plumbing Services',
+    foodSafety: false,
+    sla: { emergency: 1, urgent: 4, high: 24, routine: null }
+  },
+  'General Plumbing': {
+    category: 'Plumbing',
+    diagnosticProfile: 'PLUMBING_GENERAL',
+    criticality: 'Routine',
+    requiresPower: false,
+    provider: 'Plumbing Services',
+    foodSafety: false,
+    sla: { emergency: 1, urgent: 4, high: 24, routine: null }
+  },
+  'Roof Leak': {
+    category: 'Building & Civil',
+    diagnosticProfile: 'BUILDING_GENERAL',
+    criticality: 'Important',
+    requiresPower: false,
+    provider: 'Building Maintenance',
+    foodSafety: false,
+    sla: { emergency: 1, urgent: 4, high: 24, routine: null }
+  },
+  'Floor / Tiling': {
+    category: 'Building & Civil',
+    diagnosticProfile: 'BUILDING_GENERAL',
+    criticality: 'Routine',
+    requiresPower: false,
+    provider: 'Building Maintenance',
+    foodSafety: false,
+    sla: { emergency: 1, urgent: 4, high: 24, routine: null }
+  },
+  'Door / Lock': {
+    category: 'Building & Civil',
+    diagnosticProfile: 'BUILDING_GENERAL',
+    criticality: 'Routine',
+    requiresPower: false,
+    provider: 'Building Maintenance',
+    foodSafety: false,
+    sla: { emergency: 1, urgent: 4, high: 24, routine: null }
+  },
+  'General Building': {
+    category: 'Building & Civil',
+    diagnosticProfile: 'BUILDING_GENERAL',
+    criticality: 'Routine',
+    requiresPower: false,
+    provider: 'Building Maintenance',
+    foodSafety: false,
+    sla: { emergency: 1, urgent: 4, high: 24, routine: null }
+  },
+  'Customer Trolley': {
+    category: 'Trolleys',
+    diagnosticProfile: 'TROLLEY',
+    criticality: 'Routine',
+    requiresPower: false,
+    provider: 'Workshop Team',
+    foodSafety: false,
+    sla: { emergency: 1, urgent: 4, high: 24, routine: null }
+  },
+  'Basket / Pallet Jack / Flatbed': {
+    category: 'Trolleys',
+    diagnosticProfile: 'TROLLEY',
+    criticality: 'Routine',
+    requiresPower: false,
+    provider: 'Workshop Team',
+    foodSafety: false,
+    sla: { emergency: 1, urgent: 4, high: 24, routine: null }
+  },
+  'Bakery Oven': {
+    category: 'Bakery',
+    diagnosticProfile: 'BAKERY',
+    criticality: 'Important',
+    requiresPower: true,
+    provider: 'Bakery Services',
+    foodSafety: true,
+    powerPath: 'B',
+    sla: { emergency: 1, urgent: 4, high: 24, routine: null }
+  },
+  'Dough Divider': {
+    category: 'Bakery',
+    diagnosticProfile: 'BAKERY',
+    criticality: 'Important',
+    requiresPower: true,
+    provider: 'Bakery Services',
+    foodSafety: true,
+    powerPath: 'B',
+    sla: { emergency: 1, urgent: 4, high: 24, routine: null }
+  },
+  'Dough Mixer': {
+    category: 'Bakery',
+    diagnosticProfile: 'BAKERY',
+    criticality: 'Important',
+    requiresPower: true,
+    provider: 'Bakery Services',
+    foodSafety: true,
+    powerPath: 'B',
+    sla: { emergency: 1, urgent: 4, high: 24, routine: null }
+  },
+  'General Bakery Equipment': {
+    category: 'Bakery',
+    diagnosticProfile: 'BAKERY',
+    criticality: 'Important',
+    requiresPower: true,
+    provider: 'Bakery Services',
+    foodSafety: true,
+    powerPath: 'B',
+    sla: { emergency: 1, urgent: 4, high: 24, routine: null }
+  },
+  'Bandsaw': {
+    category: 'Butchery',
+    diagnosticProfile: 'BUTCHERY',
+    criticality: 'Important',
+    requiresPower: true,
+    provider: 'Butchery Technician',
+    foodSafety: true,
+    powerPath: 'B',
+    sla: { emergency: 1, urgent: 4, high: 24, routine: null }
+  },
+  'Mincer': {
+    category: 'Butchery',
+    diagnosticProfile: 'BUTCHERY',
+    criticality: 'Important',
+    requiresPower: true,
+    provider: 'Butchery Technician',
+    foodSafety: true,
+    powerPath: 'B',
+    sla: { emergency: 1, urgent: 4, high: 24, routine: null }
+  },
+  'Vacuum Machine': {
+    category: 'Butchery',
+    diagnosticProfile: 'BUTCHERY',
+    criticality: 'Important',
+    requiresPower: true,
+    provider: 'Butchery Technician',
+    foodSafety: true,
+    powerPath: 'B',
+    sla: { emergency: 1, urgent: 4, high: 24, routine: null }
+  },
+  'Slicer': {
+    category: 'Butchery',
+    diagnosticProfile: 'BUTCHERY',
+    criticality: 'Important',
+    requiresPower: true,
+    provider: 'Butchery Technician',
+    foodSafety: true,
+    powerPath: 'B',
+    sla: { emergency: 1, urgent: 4, high: 24, routine: null }
+  },
+  'General Butchery Equipment': {
+    category: 'Butchery',
+    diagnosticProfile: 'BUTCHERY',
+    criticality: 'Important',
+    requiresPower: true,
+    provider: 'Butchery Technician',
+    foodSafety: true,
+    powerPath: 'B',
+    sla: { emergency: 1, urgent: 4, high: 24, routine: null }
+  },
+  'Fryer': {
+    category: 'Deli',
+    diagnosticProfile: 'DELI',
+    criticality: 'Important',
+    requiresPower: true,
+    provider: 'Deli Services',
+    foodSafety: true,
+    powerPath: 'B',
+    sla: { emergency: 1, urgent: 4, high: 24, routine: null }
+  },
+  'Grill': {
+    category: 'Deli',
+    diagnosticProfile: 'DELI',
+    criticality: 'Important',
+    requiresPower: true,
+    provider: 'Deli Services',
+    foodSafety: true,
+    powerPath: 'B',
+    sla: { emergency: 1, urgent: 4, high: 24, routine: null }
+  },
+  'Bain Marie': {
+    category: 'Deli',
+    diagnosticProfile: 'DELI',
+    criticality: 'Important',
+    requiresPower: true,
+    provider: 'Deli Services',
+    foodSafety: true,
+    powerPath: 'B',
+    sla: { emergency: 1, urgent: 4, high: 24, routine: null }
+  },
+  'Combi Oven': {
+    category: 'Deli',
+    diagnosticProfile: 'DELI',
+    criticality: 'Important',
+    requiresPower: true,
+    provider: 'Deli Services',
+    foodSafety: true,
+    powerPath: 'B',
+    sla: { emergency: 1, urgent: 4, high: 24, routine: null }
+  },
+  'General Deli Equipment': {
+    category: 'Deli',
+    diagnosticProfile: 'DELI',
+    criticality: 'Important',
+    requiresPower: true,
+    provider: 'Deli Services',
+    foodSafety: true,
+    powerPath: 'B',
+    sla: { emergency: 1, urgent: 4, high: 24, routine: null }
+  },
+  'Sealer': {
+    category: 'Fruit & Veg',
+    diagnosticProfile: 'FV',
+    criticality: 'Routine',
+    requiresPower: true,
+    provider: 'F&V Team',
+    foodSafety: true,
+    powerPath: 'B',
+    sla: { emergency: 1, urgent: 4, high: 24, routine: null }
+  },
+  'Wrapper': {
+    category: 'Fruit & Veg',
+    diagnosticProfile: 'FV',
+    criticality: 'Routine',
+    requiresPower: true,
+    provider: 'F&V Team',
+    foodSafety: true,
+    powerPath: 'B',
+    sla: { emergency: 1, urgent: 4, high: 24, routine: null }
+  },
+  'Aircon Unit': {
+    category: 'HVAC',
+    diagnosticProfile: 'HVAC',
+    criticality: 'Important',
+    requiresPower: true,
+    provider: 'HVAC Contractor',
+    foodSafety: false,
+    powerPath: 'B',
+    sla: { emergency: 1, urgent: 4, high: 24, routine: null }
+  },
+  'General HVAC': {
+    category: 'HVAC',
+    diagnosticProfile: 'HVAC',
+    criticality: 'Important',
+    requiresPower: true,
+    provider: 'HVAC Contractor',
+    foodSafety: false,
+    powerPath: 'B',
+    sla: { emergency: 1, urgent: 4, high: 24, routine: null }
+  },
+  'Fire Extinguisher': {
+    category: 'Fire Safety',
+    diagnosticProfile: 'FIRE',
+    criticality: 'Critical',
+    requiresPower: false,
+    provider: 'Fire Services',
+    foodSafety: false,
+    sla: { emergency: 1, urgent: 4, high: 24, routine: null }
+  },
+  'Smoke Detector': {
+    category: 'Fire Safety',
+    diagnosticProfile: 'FIRE',
+    criticality: 'Critical',
+    requiresPower: true,
+    provider: 'Fire Services',
+    foodSafety: false,
+    powerPath: 'D',
+    sla: { emergency: 1, urgent: 4, high: 24, routine: null }
+  },
+  'Fire Door': {
+    category: 'Fire Safety',
+    diagnosticProfile: 'FIRE',
+    criticality: 'Critical',
+    requiresPower: false,
+    provider: 'Fire Services',
+    foodSafety: false,
+    sla: { emergency: 1, urgent: 4, high: 24, routine: null }
+  },
+  'Hose Reel': {
+    category: 'Fire Safety',
+    diagnosticProfile: 'FIRE',
+    criticality: 'Critical',
+    requiresPower: false,
+    provider: 'Fire Services',
+    foodSafety: false,
+    sla: { emergency: 1, urgent: 4, high: 24, routine: null }
+  },
+  'Fire Panel / Alarm': {
+    category: 'Fire Safety',
+    diagnosticProfile: 'FIRE',
+    criticality: 'Critical',
+    requiresPower: true,
+    provider: 'Fire Services',
+    foodSafety: false,
+    powerPath: 'D',
+    sla: { emergency: 1, urgent: 4, high: 24, routine: null }
+  },
+  'Rodent Activity': {
+    category: 'Pest & Hygiene',
+    diagnosticProfile: 'PEST',
+    criticality: 'Important',
+    requiresPower: false,
+    provider: 'Pest Contractor',
+    foodSafety: true,
+    sla: { emergency: 1, urgent: 4, high: 24, routine: null }
+  },
+  'Insect Infestation': {
+    category: 'Pest & Hygiene',
+    diagnosticProfile: 'PEST',
+    criticality: 'Important',
+    requiresPower: false,
+    provider: 'Pest Contractor',
+    foodSafety: true,
+    sla: { emergency: 1, urgent: 4, high: 24, routine: null }
+  },
+  'Hygiene Dispenser': {
+    category: 'Pest & Hygiene',
+    diagnosticProfile: 'PEST',
+    criticality: 'Routine',
+    requiresPower: false,
+    provider: 'Pest Contractor',
+    foodSafety: false,
+    sla: { emergency: 1, urgent: 4, high: 24, routine: null }
+  },
+  'General Pest': {
+    category: 'Pest & Hygiene',
+    diagnosticProfile: 'PEST',
+    criticality: 'Routine',
+    requiresPower: false,
+    provider: 'Pest Contractor',
+    foodSafety: false,
+    sla: { emergency: 1, urgent: 4, high: 24, routine: null }
+  },
+  'General Equipment / Other': {
+    category: 'General',
+    diagnosticProfile: 'GENERAL',
+    criticality: 'Routine',
+    requiresPower: false,
+    provider: 'FM Manager',
+    foodSafety: false,
+    sla: { emergency: 1, urgent: 4, high: 24, routine: null }
+  }
 };
 
-const DIAGNOSTIC_FLOW = {
-    1: [ // Upright fridge
-        { q: "What is the current temperature reading on the display?" },
-        { q: "Is there airflow blowing from the vents at eye level? (Yes / No)" },
-        { q: "How many base fans underneath the unit are spinning? (All / Some / None)" },
-        { q: "Is there stagnant water visible near the base fans? (Yes / No)" },
-        { q: "Is there visible damage at the base — broken fan or burnt motor smell? (Yes / No)" },
-        { q: "Is this an AHT Freor unit? (Yes / No)", id: 'is_aht' },
-        { q: "Are the fans on top of the AHT Freor unit spinning? (Yes / No)", skip: (d) => d.is_aht?.toLowerCase().includes('no') }
-    ],
-    2: [ // Cold room
-        { q: "What is the current temperature reading on the display?" },
-        { q: "Are the blower fans inside the cold room spinning? (All / Some / None)", id: 'fans' },
-        { q: "How many fans are spinning out of the total? (e.g. 2 of 4)", skip: (d) => d.fans?.toLowerCase().includes('all') || d.fans?.toLowerCase().includes('none') },
-        { q: "Is there ice build-up on the blower unit? (Front / Back / Both / No)" },
-        { q: "Is the compressor fan spinning on the exterior unit outside the building? (Yes / No / Not visible)" }
-    ],
-    3: [ // Freezer room
-        { q: "What is the current temperature reading on the display?" },
-        { q: "Are the blower fans inside the freezer room spinning? (All / Some / None)", id: 'fans' },
-        { q: "How many fans are spinning out of the total? (e.g. 1 of 3)", skip: (d) => d.fans?.toLowerCase().includes('all') || d.fans?.toLowerCase().includes('none') },
-        { q: "Is there ice build-up on the blower unit? (Front / Back / Both / No)" },
-        { q: "Is the compressor fan spinning on the exterior unit? (Yes / No / Not visible)" }
-    ],
-    4: [ // Island freezer
-        { q: "What is the current temperature reading on the display?" },
-        { q: "Are the interior fans inside the island unit spinning? (All / Some — count / None)" },
-        { q: "Is there ice build-up on the interior evaporator? (Yes / No)" },
-        { q: "Is the compressor fan spinning on the exterior or base unit? (Yes / No / Not visible)" }
-    ],
-    5: [ // Serve over
-        { q: "What is the current temperature reading on the display?" },
-        { q: "Are the interior fans inside the serve-over spinning? (All / Some — count / None)" },
-        { q: "Is there ice build-up visible on any internal surface? (Yes — describe / No)" },
-        { q: "Is the compressor fan spinning on the exterior or base unit? (Yes / No / Not visible)" }
-    ],
-    13: [ // Trolleys - Customer
-        { q: "What is the fault?\n1. Wheels not rolling smoothly\n2. Wheel missing or broken\n3. Handle broken or loose\n4. Ear supports missing or broken\n5. Structural damage" },
-        { q: "How many units are affected? (1 / 2 to 5 / More than 5)" },
-        { q: "Are loose handles being stored for refitment — NOT discarded? (Yes / No)" }
-    ],
-    14: [ // Trolleys - Baskets etc
-        { q: "What is the fault?\n1. Wheels not rolling smoothly\n2. Wheel missing or broken\n3. Handle broken or loose\n4. Ear supports missing or broken\n5. Structural damage" },
-        { q: "How many units are affected? (1 / 2 to 5 / More than 5)" },
-        { q: "Are loose handles being stored for refitment — NOT discarded? (Yes / No)" }
-    ],
-    15: [ // Bakery
-        { q: "Are the moving parts of the equipment operating? (Yes / No)" },
-        { q: "Is the product feeding or loading correctly into the machine? (Yes / No / N/A)" },
-        { q: "Is the output consistent and within expected quality? (Yes / Inconsistent / No output)" },
-        { q: "Is there a jam, resistance, or overload indication? (Yes — describe / No)" },
-        { q: "Is the oven reaching and holding the set temperature? (Yes / No / N/A)" },
-        { q: "Is the oven fan rotating during operation? (Yes / No / N/A)" }
-    ],
-    16: [ // Butchery
-        { q: "Are all safety covers and blade guards in place and engaged? (Yes / No — specify which)" },
-        { q: "Are the blades or cutting mechanisms moving? (Yes / No / Intermittent)" },
-        { q: "Is the cutting or mincing output of acceptable quality? (Yes / Poor / No output)" },
-        { q: "Is there a blockage or product jam in the machine? (Yes / No)" },
-        { q: "Is there audible motor strain or unusual load sound? (Yes / No)" },
-        { q: "Is the vacuum sealing and suction functioning? (Yes / Partial / No / N/A)" }
-    ],
-    17: [ // Deli / Pie shop
-        { q: "Is the heating element or gas burner active and producing heat? (Yes / No)" },
-        { q: "Is the temperature stable and reaching the set point? (Yes / No / Fluctuating)" },
-        { q: "Is gas ignition working? (Yes / No / N/A)" },
-        { q: "Is the fryer oil heating correctly? (Yes / No / N/A)" },
-        { q: "Is the cold display counter cooling? (Yes / No)" },
-        { q: "Are the internal circulation fans operating? (Yes / No / N/A)" }
-    ],
-    18: [ // Fruit & Veg
-        { q: "Are the display lights and controls activating on power-up? (Yes / No)" },
-        { q: "Is the Teflon strip affixed and undamaged? (Yes / No — burnt / No — missing)" },
-        { q: "Is the hinge mechanism intact and operating smoothly? (Yes / No — broken / Stiff)" },
-        { q: "Is the heating wire exposed or visible outside its housing? (No — safe / Yes — STOP)", id: 'wire_exposed' },
-        { q: "Are the temperature dials or controls responding? (Yes / No)" },
-        { q: "Was the unit recently dropped or knocked? (Yes / No / Unknown)" },
-        { q: "Is the seal forming correctly on the product? (Yes / No / Partial)" }
-    ],
-    19: [ // HVAC
-        { q: "Is the unit producing airflow? (Yes / No)" },
-        { q: "Is the air reaching the set temperature — cooling or heating? (Yes / No / Partially)" },
-        { q: "Is there water dripping or leaking from the unit? (Yes / No)" },
-        { q: "Is there unusual noise from the indoor or outdoor unit? (Yes — describe / No)" }
-    ],
-    10: [ // Plumbing
-        { q: "What is the plumbing fault?\n1. Burst pipe\n2. Active leak\n3. Blocked drain\n4. Geyser issue\n5. Low pressure\n6. Valve failure\n7. Sewage backup\n8. Borehole / pump\n9. Other" },
-        { q: "Is there active water flow causing immediate damage or safety risk? (Yes / No)" },
-        { q: "What is the exact location of the fault?" }
-    ],
-    20: [ // Fire Safety
-        { q: "What is the fire safety fault?\n1. Extinguisher expired\n2. Extinguisher missing\n3. Smoke detector fault\n4. Sprinkler issue\n5. Fire door damaged\n6. Hose reel fault\n7. Emergency exit blocked\n8. Panel or alarm fault" },
-        { q: "Is there an active fire or immediate emergency? (Yes — evacuate now! / No)" },
-        { q: "Is the affected equipment tagged and out of service pending repair? (Yes / No)" }
-    ],
-    9: [ // Backup Power
-        { q: "Is the unit starting and running? (Yes / No / Starts then shuts down)" },
-        { q: "What is the current fuel level? (Full / Half / Low / Empty / N/A)" },
-        { q: "Is the battery charged and all connections secure? (Yes / No / Unknown)" },
-        { q: "Are there error codes or warning lights on the display? (Yes — describe / No)" },
-        { q: "Is the output power stable when running? (Yes / No / Not reaching equipment)" },
-        { q: "Is there a visible oil, fuel, or coolant leak? (Yes / No)" },
-        { q: "Is the automatic changeover activating during a power cut? (Yes / No / Not tested)" }
-    ],
-    11: [ // Building Civil Tiling
-        { q: "What type of defect is this?\n1. Roof leak 2. Ceiling damage 3. Wall crack 4. Floor / tiling 5. Door/lock 6. Window 7. Paving 8. Fence 9. Access control 10. Signage 11. Other" },
-        { q: "Is this a safety risk to staff or customers? (Yes / No)" },
-        { q: "How long has this defect been present? (Today / This week / Longer / Unknown)" }
-    ],
-    12: [ // Building Civil Roof
-        { q: "What type of defect is this?\n1. Roof leak 2. Ceiling damage 3. Wall crack 4. Floor / tiling 5. Door/lock 6. Window 7. Paving 8. Fence 9. Access control 10. Signage 11. Other" },
-        { q: "Is this a safety risk to staff or customers? (Yes / No)" },
-        { q: "How long has this defect been present? (Today / This week / Longer / Unknown)" }
-    ],
-    6: [ // Electrical - Lighting
-        { q: "Is the failure affecting 1. A single bulb 2. A section/aisle 3. The entire floor" },
-        { q: "Is there any flickering or buzzing heard? (Yes / No)" },
-        { q: "Is the emergency lighting functional? (Yes / No / N/A)" }
-    ],
-    7: [ // Electrical - Plug points
-        { q: "Is there visible damage to the socket (burnt/cracked)? (Yes / No)" },
-        { q: "Is the plug loose when inserted? (Yes / No)" },
-        { q: "How many sockets are affected?" }
-    ],
-    8: [ // Electrical - Switches / DB
-        { q: "Is there a burning smell near the board? (Yes / No)" },
-        { q: "Are any breakers hot to the touch? (Yes / No / Unknown)" },
-        { q: "Is there a loud humming or arcing sound? (Yes / No)" }
-    ],
-    21: [ // Pest & Hygiene
-        { q: "What is the issue? 1. Rodent sighting 2. Insect activity 3. Sanitizer station empty 4. Deep clean required 5. Other" },
-        { q: "Is this in a food-prep area? (Yes / No)" },
-        { q: "Is there an immediate health risk? (Yes / No)" }
-    ],
-    22: [ // General
-        { q: "Please describe the fault in detail." },
-        { q: "How long has this been an issue?" },
-        { q: "Are any other units or sections affected?" }
-    ]
+const CATEGORY_EQUIPMENT = {
+  'Refrigeration':    ['Upright Fridge','Cold Room','Freezer Room','Island Freezer','Serve Over'],
+  'Electrical':       ['Lighting','Plug Points / Sockets','DB Board / Switches'],
+  'Backup Power':     ['Generator','UPS'],
+  'Plumbing':         ['Burst Pipe','Blocked Drain','Geyser / Water Heater','General Plumbing'],
+  'Building & Civil': ['Roof Leak','Floor / Tiling','Door / Lock','General Building'],
+  'Trolleys':         ['Customer Trolley','Basket / Pallet Jack / Flatbed'],
+  'Bakery':           ['Bakery Oven','Dough Divider','Dough Mixer','General Bakery Equipment'],
+  'Butchery':         ['Bandsaw','Mincer','Vacuum Machine','Slicer','General Butchery Equipment'],
+  'Deli':             ['Fryer','Grill','Bain Marie','Combi Oven','General Deli Equipment'],
+  'Fruit & Veg':      ['Sealer','Wrapper'],
+  'HVAC':             ['Aircon Unit','General HVAC'],
+  'Fire Safety':      ['Fire Extinguisher','Smoke Detector','Fire Door','Hose Reel','Fire Panel / Alarm'],
+  'Pest & Hygiene':   ['Rodent Activity','Insect Infestation','Hygiene Dispenser','General Pest'],
+  'General':          ['General Equipment / Other'],
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EMERGENCY DETECTION
+// ─────────────────────────────────────────────────────────────────────────────
+const EMERGENCY_TRIGGERS = [
+  'fire', 'flames', 'burning', 'smoke',
+  'flooding', 'flood', 'water pouring',
+  'sparking', 'sparks', 'electrical spark',
+  'exposed wire', 'exposed wiring', 'live wire',
+  'gas leak', 'smell gas',
+  'structural collapse', 'ceiling falling', 'wall collapse',
+  'person injured', 'staff injured', 'customer injured',
+  'emergency', 'evacuate',
+];
+
+function detectEmergency(text = '') {
+  const lower = text.toLowerCase();
+  return EMERGENCY_TRIGGERS.some(t => lower.includes(t));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LAYER 9 — PRIORITY ENGINE
+// ─────────────────────────────────────────────────────────────────────────────
+function calculatePriority(state) {
+  const { safetyRisk, emergencyType, foodSafetyRisk, operationalImpact, assetProfile, faultType } = state;
+
+  // Priority 1 — Emergency
+  if (
+    safetyRisk?.includes('at risk') ||
+    (emergencyType && emergencyType !== 'None') ||
+    (foodSafetyRisk?.coldChainCompromised === true) ||
+    operationalImpact === 'Trading Stopped' ||
+    operationalImpact === 'Store Wide Impact'
+  ) return { level: 1, label: 'Emergency', sla: '1 Hour', colour: '#E53935' };
+
+  // Priority 2 — Urgent
+  if (
+    assetProfile?.criticality === 'Critical' ||
+    operationalImpact === 'Multiple Departments Impacted' ||
+    faultType === 'No Power' ||
+    (foodSafetyRisk?.productAboveTemp === true)
+  ) return { level: 2, label: 'Urgent', sla: '4 Hours', colour: '#F7B731' };
+
+  // Priority 3 — High
+  if (
+    operationalImpact === 'Department Impact' ||
+    assetProfile?.criticality === 'Important'
+  ) return { level: 3, label: 'High', sla: '24 Hours', colour: '#028090' };
+
+  // Priority 4 — Routine
+  return { level: 4, label: 'Routine', sla: 'Next Available Slot', colour: '#1DB954' };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LAYER 6 — CATEGORY DIAGNOSTIC ENGINE
+// ─────────────────────────────────────────────────────────────────────────────
+const DIAGNOSTIC_QUESTIONS = {
+  REFRIG_UPRIGHT: [
+    { id: 'R_TEMP',    text: 'What is the current temperature reading on the display?', type: 'number' },
+    { id: 'R_ALARM',   text: 'Is there an active alarm or warning on the unit?',         type: 'options', options: ['Yes','No'] },
+    { id: 'R_VENT',    text: 'Is there airflow blowing from the vents at eye level?',    type: 'options', options: ['Yes','No'] },
+    { id: 'R_BASEFAN', text: 'How many base fans underneath the unit are spinning?',     type: 'options', options: ['All spinning','Some spinning — enter count','None spinning'] },
+    { id: 'R_WATER',   text: 'Is there stagnant water visible near the base fans?',     type: 'options', options: ['Yes','No'] },
+    { id: 'R_DAMAGE',  text: 'Is there visible damage at the base — broken fan or burnt motor smell?', type: 'options', options: ['Yes — describe','No'] },
+    { id: 'R_AHT',     text: 'Is this an AHT Freor unit?',                              type: 'options', options: ['Yes','No'] },
+    { id: 'R_AHTFAN',  text: 'Are the fans on top of the AHT Freor unit spinning?',    type: 'options', options: ['Yes','No'], conditional: (d) => d.R_AHT === 'Yes' },
+  ],
+  REFRIG_COLDROOM: [
+    { id: 'C_TEMP',    text: 'What is the current temperature reading on the display?', type: 'number' },
+    { id: 'C_ALARM',   text: 'Is there an active alarm or warning on the unit?',         type: 'options', options: ['Yes','No'] },
+    { id: 'C_FANS',    text: 'Are the blower fans inside the cold room spinning?',       type: 'options', options: ['All spinning','Some spinning','None spinning'] },
+    { id: 'C_ICE',     text: 'Is there ice build-up on the blower unit?',               type: 'options', options: ['Yes — front','Yes — back','Yes — both','No'] },
+    { id: 'C_COMP',    text: 'Is the compressor fan spinning on the exterior unit?',    type: 'options', options: ['Yes','No','Not visible'] },
+  ],
+  REFRIG_FREEZER: [
+    { id: 'F_TEMP',    text: 'What is the current temperature reading on the display?', type: 'number' },
+    { id: 'F_ALARM',   text: 'Is there an active alarm or warning on the unit?',         type: 'options', options: ['Yes','No'] },
+    { id: 'F_FANS',    text: 'Are the blower fans inside the freezer room spinning?',   type: 'options', options: ['All spinning','Some spinning','None spinning'] },
+    { id: 'F_ICE',     text: 'Is there ice build-up on the blower unit?',               type: 'options', options: ['Yes — front','Yes — back','Yes — both','No'] },
+    { id: 'F_COMP',    text: 'Is the compressor fan spinning on the exterior unit?',    type: 'options', options: ['Yes','No','Not visible'] },
+  ],
+  REFRIG_ISLAND: [
+    { id: 'I_TEMP',    text: 'What is the current temperature reading on the display?', type: 'number' },
+    { id: 'I_ALARM',   text: 'Is there an active alarm or warning on the unit?',         type: 'options', options: ['Yes','No'] },
+    { id: 'I_FANS',    text: 'Are the interior fans inside the island unit spinning?',  type: 'options', options: ['All spinning','Some spinning','None spinning'] },
+    { id: 'I_ICE',     text: 'Is there ice build-up on the interior evaporator?',       type: 'options', options: ['Yes','No'] },
+    { id: 'I_COMP',    text: 'Is the compressor fan spinning on the exterior or base unit?', type: 'options', options: ['Yes','No','Not visible'] },
+  ],
+  REFRIG_SERVEOVER: [
+    { id: 'S_TEMP',    text: 'What is the current temperature reading on the display?', type: 'number' },
+    { id: 'S_ALARM',   text: 'Is there an active alarm or warning on the unit?',         type: 'options', options: ['Yes','No'] },
+    { id: 'S_FANS',    text: 'Are the interior fans inside the serve-over spinning?',   type: 'options', options: ['All spinning','Some spinning','None spinning'] },
+    { id: 'S_ICE',     text: 'Is there ice build-up on any internal surface?',          type: 'options', options: ['Yes — describe location','No'] },
+    { id: 'S_COMP',    text: 'Is the compressor fan spinning on the exterior or base unit?', type: 'options', options: ['Yes','No','Not visible'] },
+  ],
+  ELECTRICAL_LIGHTING: [
+    { id: 'EL_AREA',   text: 'Which area or circuit is affected?', type: 'text' },
+    { id: 'EL_BREAK',  text: 'Is the circuit breaker at the DB board tripped for this area?', type: 'options', options: ['Yes','No','Not checked'] },
+  ],
+  ELECTRICAL_SOCKETS: [
+    { id: 'ES_AREA',   text: 'Which socket or area is affected?', type: 'text' },
+    { id: 'ES_BREAK',  text: 'Is the circuit breaker at the DB board tripped?', type: 'options', options: ['Yes','No','Not checked'] },
+  ],
+  ELECTRICAL_DB: [
+    { id: 'ED_TRIPPED',text: 'Is a breaker at the DB board tripped or off?',            type: 'options', options: ['Yes','No','Multiple'] },
+    { id: 'ED_CIRCUIT',text: 'Which circuit or label is the tripped breaker for?',     type: 'text' },
+  ],
+  BACKUP_GENERATOR: [
+    { id: 'G_START',   text: 'Is the generator starting and running?',                  type: 'options', options: ['Yes','No','Starts then shuts down'] },
+    { id: 'G_FUEL',    text: 'What is the current fuel level?',                          type: 'options', options: ['Full','Three quarter','Half','Low','Empty'] },
+  ],
+  PLUMBING_GENERAL: [
+    { id: 'P_TYPE',    text: 'What is the plumbing fault?',                              type: 'options', options: ['Burst pipe','Active leak','Blocked drain','Geyser','Pressure','Valve','Sewage','Pump','Other'] },
+    { id: 'P_ACTIVE',  text: 'Is there active water flow causing immediate damage?', type: 'options', options: ['Yes — isolated','Yes — NOT isolated','No'] },
+    { id: 'P_LOCATION',text: 'What is the exact location of the fault?',               type: 'text' },
+  ],
+  TROLLEY: [
+    { id: 'T_FAULT',   text: 'What is the primary fault?',               type: 'options', options: ['Wheels','Handle','Ear supports','Structural'] },
+    { id: 'T_COUNT',   text: 'How many units are affected?',                            type: 'options', options: ['1','2 to 5','More than 5'] },
+  ],
+  BAKERY: [
+    { id: 'B_MOVING',  text: 'Are the moving parts of the equipment operating?',        type: 'options', options: ['Yes','No'] },
+    { id: 'B_OVENTEMP',text: 'Is the oven reaching and holding the set temperature?',  type: 'options', options: ['Yes','No','N/A'] },
+  ],
+  BUTCHERY: [
+    { id: 'BU_GUARDS', text: 'Are all safety covers and blade guards in place?', type: 'options', options: ['Yes','No'] },
+    { id: 'BU_BLADES', text: 'Are the blades or cutting mechanisms moving?',            type: 'options', options: ['Yes','No','Intermittent'] },
+  ],
+  DELI: [
+    { id: 'D_HEATING', text: 'Is the heating element or gas burner active?', type: 'options', options: ['Yes','No'] },
+    { id: 'D_TEMP',    text: 'Is the temperature stable and reaching the set point?',   type: 'options', options: ['Yes','No','Fluctuating'] },
+  ],
+  FV: [
+    { id: 'FV_WIRE',   text: 'Is the heating wire exposed or visible outside its housing?', type: 'options', options: ['No','Yes — EMERGENCY'] },
+    { id: 'FV_SEAL',   text: 'Is the seal forming correctly on the product?',           type: 'options', options: ['Yes','No','Partial'] },
+  ],
+  HVAC: [
+    { id: 'H_AIRFLOW', text: 'Is the unit producing airflow?',                          type: 'options', options: ['Yes','No'] },
+    { id: 'H_TEMP',    text: 'Is the air reaching the set temperature?', type: 'options', options: ['Yes','No','Partially'] },
+  ],
+  FIRE: [
+    { id: 'FS_TYPE',   text: 'What is the fire safety fault?',                          type: 'options', options: ['Extinguisher','Smoke detector','Sprinkler','Fire door','Hose reel','Alarm'] },
+    { id: 'FS_ACTIVE', text: 'Is there an active fire or immediate emergency?',         type: 'options', options: ['Yes','No'] },
+  ],
+  PEST: [
+    { id: 'PEST_TYPE', text: 'What is the issue?', type: 'options', options: ['Rodent','Insects','Hygiene station','Other'] },
+    { id: 'PEST_LOCATION', text: 'Is this in a food-prep area?', type: 'options', options: ['Yes','No'] },
+  ],
+  GENERAL: [
+    { id: 'GEN_DESC', text: 'Please describe the fault in detail.', type: 'text' }
+  ]
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LAYER 7 — FOOD SAFETY
+// ─────────────────────────────────────────────────────────────────────────────
+const FOOD_SAFETY_QUESTIONS = [
+  { id: 'FS_COLDCHAIN',  text: 'Has the cold chain been compromised?',                  type: 'options', options: ['Yes','No','Unknown'] },
+  { id: 'FS_PRODTEMP',   text: 'Is product above the safe storage temperature?',        type: 'options', options: ['Yes','No','Unknown'] },
+  { id: 'FS_CONTAM',     text: 'Is there a risk of contamination?',                     type: 'options', options: ['Yes','No','Unknown'] },
+  { id: 'FS_PRODUCTION', text: 'Has production stopped due to this fault?',             type: 'options', options: ['Yes','No'] },
+  { id: 'FS_STOCK',      text: 'Is stock at risk of spoilage or disposal?',             type: 'options', options: ['Yes','No','Unknown'] },
+];
 
 const PHASES = {
-    IDENTIFICATION: 'IDENTIFICATION',
-    POWER_CHECK: 'POWER_CHECK',
-    POWER_SUBPATH: 'POWER_SUBPATH',
-    UNIVERSAL_ENGINE: 'UNIVERSAL_ENGINE',
-    CATEGORY_DIAGNOSTIC: 'CATEGORY_DIAGNOSTIC',
-    MEDIA_PRIORITY: 'MEDIA_PRIORITY',
-    REPORT_CONFIRM: 'REPORT_CONFIRM',
-    COMPLETED: 'COMPLETED'
+  IDENTIFICATION: 'IDENTIFICATION',
+  POWER_CHECK: 'POWER_CHECK',
+  POWER_SUBPATH: 'POWER_SUBPATH',
+  UNIVERSAL_ENGINE: 'UNIVERSAL_ENGINE',
+  CATEGORY_DIAGNOSTIC: 'CATEGORY_DIAGNOSTIC',
+  FOOD_SAFETY: 'FOOD_SAFETY',
+  MEDIA_PRIORITY: 'MEDIA_PRIORITY',
+  REPORT_CONFIRM: 'REPORT_CONFIRM',
+  COMPLETED: 'COMPLETED'
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// UTILITIES
+// ─────────────────────────────────────────────────────────────────────────────
+function generateTicketId() {
+  const ts = Date.now().toString(36).toUpperCase();
+  const rand = Math.random().toString(36).slice(2, 5).toUpperCase();
+  return `FM-${ts}-${rand}`;
+}
+
+function determineOutcome(state) {
+  const values = Object.values(state.diagnosticResults || {});
+  const hasNo = values.some(v => v === 'No' || v === 'None spinning');
+  if (state.emergencyType && state.emergencyType !== 'None') return 'Emergency Escalation';
+  if (state.powerStatus === 'Electrical fault escalated') return 'Technician Required';
+  if (hasNo) return 'Technician Required';
+  return 'Monitor';
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MAIN ENGINE LOGIC
+// ─────────────────────────────────────────────────────────────────────────────
+
 function getNextQuestion(session) {
-    const state = session.state || { phase: PHASES.IDENTIFICATION, step: 1 };
-    session.state = state;
+  const state = session.state || { phase: PHASES.IDENTIFICATION, step: 'STORE' };
+  session.state = state;
+  const data = session.data || {};
 
-    // --- PHASE 1: IDENTIFICATION ---
-    if (state.phase === PHASES.IDENTIFICATION) {
-        switch (state.step) {
-            case 1: return "Please provide the store or branch name you are reporting from.";
-            case 2: return "What is your full name?";
-            case 3:
-                let catList = "Please select the equipment category (enter number):\n";
-                Object.entries(CATEGORIES).forEach(([id, name]) => {
-                    catList += `${id}. ${name}\n`;
-                });
-                return catList;
-            case 4: return "Where exactly is the unit located? (e.g. Aisle 3, Dairy section, Bakery, Loading bay)";
-            case 5: return "Please give me the following details:\na) Equipment name / type\nb) Brand\nc) Model (if visible)\nd) Asset tag\ne) Serial number\n\nReply with each one, or type 'unknown' for anything you cannot find.";
-        }
+  // --- PHASE 1: IDENTIFICATION ---
+  if (state.phase === PHASES.IDENTIFICATION) {
+    switch (state.step) {
+      case 'STORE': return "Please provide the store or branch name you are reporting from.";
+      case 'REPORTER': return "What is your full name?";
+      case 'CATEGORY':
+        let catList = "Please select the equipment category:\n";
+        Object.keys(CATEGORY_EQUIPMENT).forEach((name, i) => { catList += `${i + 1}. ${name}\n`; });
+        return catList;
+      case 'EQUIPMENT':
+        const equipList = CATEGORY_EQUIPMENT[data.category] || [];
+        let eMsg = `Select the specific equipment for ${data.category}:\n`;
+        equipList.forEach((name, i) => { eMsg += `${i + 1}. ${name}\n`; });
+        return eMsg;
+      case 'LOCATION': return "Where exactly is the unit located? (e.g. Aisle 3, Bakery)";
+      case 'BRAND': return "What is the Brand of the equipment? (Type 'unknown' if not found)";
+      case 'MODEL': return "What is the Model? (Type 'unknown' if not found)";
+      case 'TAG': return "What is the Asset Tag? (Type 'unknown' if not found)";
+      case 'SERIAL': return "What is the Serial Number? (Type 'unknown' if not found)";
     }
+  }
 
-    // --- PHASE 2: POWER CHECK ---
-    if (state.phase === PHASES.POWER_CHECK) {
-        return "Is there power to the unit? Check the display panel or any lights on the equipment.\nOptions: Yes / No";
+  // --- PHASE 2: POWER CHECK ---
+  if (state.phase === PHASES.POWER_CHECK) {
+    return "Is there power to the unit? (Yes / No)";
+  }
+
+  if (state.phase === PHASES.POWER_SUBPATH) {
+    const ap = data.assetProfile || {};
+    const path = ap.powerPath || 'B';
+    const subStep = parseInt(state.step);
+
+    if (path === 'A') { // Isolator Path
+      if (subStep === 1) return "Switch the isolator OFF. Wait 10 seconds. Switch it back ON. Is there power now? (Yes / No)";
+      if (subStep === 2) return "Check the DB board. Is the breaker for this unit tripped? (Yes / No)";
+      if (subStep === 3) return "Reset the breaker. Is there power now? (Yes / No)";
+    } else if (path === 'B' || path === 'C') { // Plug/Move Path
+      if (subStep === 1) return "Test the unit on an alternate plug socket. Is there power? (Yes / No)";
+      if (subStep === 2) return "Is the circuit breaker at the DB board tripped? (Yes / No)";
+      if (subStep === 3) return "Reset it. Is there power now? (Yes / No)";
+    } else { // Default DB Path
+      if (subStep === 1) return "Is the circuit breaker for this area tripped? (Yes / No)";
+      if (subStep === 2) return "Reset it. Is power restored? (Yes / No)";
     }
+    return "Proceeding to diagnostic.";
+  }
 
-    if (state.phase === PHASES.POWER_SUBPATH) {
-        const cat = parseInt(session.data.category_id);
-        const subStep = state.step;
-
-        // Cold room/Freezer room (Fixed installation): ISOLATOR PATH
-        if (cat === 2 || cat === 3) {
-            if (subStep === 1) return "Switch the isolator OFF. Wait 10 seconds. Switch it back ON. Is there power now?\nOptions: Yes / No";
-            if (subStep === 2) return "Check the distribution board (DB board). Is the breaker for this unit tripped or switched off?\nOptions: Yes / No";
-            if (subStep === 3) return "Reset the breaker. Is there power now?\nOptions: Yes / No";
-        }
-
-        // Upright fridge/Serve over/Bakery/Butchery/Deli/F&V: PLUG PATH
-        if ([1, 5, 15, 16, 17, 18].includes(cat)) {
-            if (subStep === 1) return "Test the unit on an alternate plug socket nearby. Is there power on the alternate socket?\nOptions: Yes / No";
-            if (subStep === 2) return "Is the circuit breaker at the DB board tripped?\nOptions: Yes / No";
-            if (subStep === 3) return "Reset it. Is there power now?\nOptions: Yes / No";
-        }
-
-        // Island freezer: MOVE PATH
-        if (cat === 4) {
-            if (subStep === 1) return "Move the island freezer to an alternate socket. Is there power now? (Mandatory if no power)\nOptions: Yes / No";
-        }
-
-        // Electrical categories (6, 7, 8): DB PATH
-        if ([6, 7, 8].includes(cat)) {
-            if (subStep === 1) return "Is the circuit breaker for this area tripped at the DB board?\nOptions: Yes / No";
-            if (subStep === 2) return "Reset it. Is power restored?\nOptions: Yes / No";
-            if (subStep === 3) return "Is there visible damage — burn marks, exposed wire, or sparking?\nOptions: Yes / No";
-        }
-
-        return "Electrical fault confirmed. Proceeding to remaining diagnostic steps.";
+  // --- PHASE 3: UNIVERSAL ENGINE ---
+  if (state.phase === PHASES.UNIVERSAL_ENGINE) {
+    switch (state.step) {
+      case 'SAFETY': return "Are there any safety risks? (e.g. No risk, Staff at risk, Customers at risk)";
+      case 'IMPACT':
+        let iMsg = "What is the operational impact?\n";
+        ['No Impact', 'Minor Impact', 'Department Impact', 'Multiple Departments', 'Store Wide', 'Trading Stopped'].forEach((opt, i) => { iMsg += `${i+1}. ${opt}\n`; });
+        return iMsg;
+      case 'FAULT_TYPE':
+        let fMsg = "What is the primary fault type?\n";
+        ['Not Cooling', 'Not Heating', 'Not Starting', 'Leak', 'Noise', 'Vibration', 'Damage', 'Other'].forEach((opt, i) => { fMsg += `${i+1}. ${opt}\n`; });
+        return fMsg;
+      // Mechanical Yes/No questions (1 by 1)
+      case 'MECH_NOISE': return "Is there any unusual noise? (Yes / No)";
+      case 'MECH_JAM': return "Is there a jam or blockage? (Yes / No)";
+      case 'MECH_LEAK': return "Is there a visible leak? (Yes / No)";
+      case 'MECH_VIB': return "Is there excess vibration? (Yes / No)";
+      case 'MECH_BURN': return "Is there a burning smell? (Yes / No)";
+      case 'MECH_DMG': return "Is there visible damage or broken parts? (Yes / No)";
     }
+  }
 
-    // --- PHASE 3: UNIVERSAL ENGINE ---
-    if (state.phase === PHASES.UNIVERSAL_ENGINE) {
-        switch (state.step) {
-            case 1: return "Are all required supplies confirmed and available?\n1. All confirmed (power / water / gas)\n2. Water supply missing or off\n3. Gas supply missing\n4. Not sure";
-            case 2: return "Are all safety conditions correct?\n1. All correct — doors seal, guards in place\n2. Door or seal issue\n3. Safety guard or interlock missing\n4. Safety risk — persons may be at risk";
-            case 3: return "What is the equipment failing to do? Select the closest match:\n1. Cool / maintain temperature\n2. Heat / cook\n3. Cut / slice / mince\n4. Mix / blend\n5. Rotate / drive / move\n6. Pump / pressurise\n7. Dispense / fill\n8. Seal / wrap\n9. Display / show readings\n10. Other";
-            case 4: return "Are any of the following present? Select all that apply (e.g. 2, 4):\n1. None of the below\n2. Unusual noise — grinding / clicking / buzzing / rattling\n3. Jam or blockage\n4. Visible leak — water / oil / gas\n5. Excess vibration\n6. Burning smell\n7. Visible damage or broken parts";
-        }
+  // --- PHASE 4: CATEGORY DIAGNOSTIC ---
+  if (state.phase === PHASES.CATEGORY_DIAGNOSTIC) {
+    const profile = data.assetProfile?.diagnosticProfile;
+    const questions = DIAGNOSTIC_QUESTIONS[profile] || [];
+    const qIndex = parseInt(state.step);
+    if (questions[qIndex]) {
+      const q = questions[qIndex];
+      let msg = q.text;
+      if (q.options) {
+        msg += "\n" + q.options.map((o, i) => `${i+1}. ${o}`).join('\n');
+      }
+      return msg;
     }
+  }
 
-    // --- PHASE 4: CATEGORY DIAGNOSTIC ---
-    if (state.phase === PHASES.CATEGORY_DIAGNOSTIC) {
-        const cat = parseInt(session.data.category_id);
-        const flow = DIAGNOSTIC_FLOW[cat] || [{ q: "Please provide any additional details about the fault for this category." }];
+  // --- PHASE 5: FOOD SAFETY ---
+  if (state.phase === PHASES.FOOD_SAFETY) {
+    const qIndex = parseInt(state.step);
+    const q = FOOD_SAFETY_QUESTIONS[qIndex];
+    return q.text + "\n1. Yes\n2. No\n3. Unknown";
+  }
 
-        let subStep = state.step;
-        while (subStep <= flow.length) {
-            const currentQ = flow[subStep - 1];
-            if (currentQ.skip && currentQ.skip(session.data)) {
-                subStep++;
-                state.step = subStep;
-                continue;
-            }
-            return currentQ.q;
-        }
+  // --- PHASE 6: MEDIA & PRIORITY ---
+  if (state.phase === PHASES.MEDIA_PRIORITY) {
+    if (state.step === 'PHOTO') return "Can you take a photo/video? Send it via WhatsApp if possible. (Yes - sending / No)";
+    if (state.step === 'PRIORITY') {
+      const p = calculatePriority(data);
+      return `Calculated Priority: ${p.label} (SLA: ${p.sla}). Is this acceptable? (Yes / No - provide reason)`;
     }
+  }
 
-    // --- PHASE 5: MEDIA & PRIORITY ---
-    if (state.phase === PHASES.MEDIA_PRIORITY) {
-        if (state.step === 1) return "Can you take a photo or video of the fault? If yes, please send it now via WhatsApp.\nOptions: Yes — sending now / No — not possible";
-        if (state.step === 2) return "How urgent is this fault?\n1. Emergency — safety risk or full operation stopped. Respond within 1 hour.\n2. Urgent — major operational impact. Respond within 4 hours.\n3. High — significant fault, not critical. Respond within 24 hours.\n4. Routine — low impact, next available slot.";
-    }
+  // --- PHASE 7: REPORT CONFIRM ---
+  if (state.phase === PHASES.REPORT_CONFIRM) {
+    const report = generateReportText(session);
+    return report + "\n\nSubmit this report? (YES / NO to restart)";
+  }
 
-    // --- PHASE 6: REPORT CONFIRM ---
-    if (state.phase === PHASES.REPORT_CONFIRM) {
-        const report = generateReport(session);
-        return report + "\n\nIs this correct? Reply YES to submit or NO to make a change.";
-    }
-
-    return "Thank you. Your report has been submitted. Would you like to log another fault?";
+  return "Report submitted successfully!";
 }
 
 function handleInput(session, input) {
-    const state = session.state || { phase: PHASES.IDENTIFICATION, step: 1 };
-    if (!session.data) session.data = {};
-    const data = session.data;
+  const text = input.trim();
+  const lowText = text.toLowerCase();
 
-    const text = input.trim();
-    const lowText = text.toLowerCase();
+  if (!session.data) session.data = {};
+  const data = session.data;
+  const state = session.state;
 
-    // --- PHASE 1: IDENTIFICATION ---
-    if (state.phase === PHASES.IDENTIFICATION) {
-        if (state.step === 1) { data.store = text; state.step = 2; }
-        else if (state.step === 2) { data.reporter = text; state.step = 3; }
-        else if (state.step === 3) {
-            let catId = null;
-            const match = text.match(/\d+/);
-
-            if (match) {
-                catId = parseInt(match[0]);
-            } else {
-                // Try fuzzy matching on category name (for UI chips)
-                const search = text.toLowerCase();
-                const entry = Object.entries(CATEGORIES).find(([id, name]) =>
-                    name.toLowerCase().includes(search)
-                );
-                if (entry) catId = parseInt(entry[0]);
-            }
-
-            if (catId && CATEGORIES[catId]) {
-                data.category_id = catId;
-                data.category = CATEGORIES[catId];
-                state.step = 4;
-            } else {
-                return "Invalid category. Please enter a number between 1 and 22 or select from the options.";
-            }
-        }
-        else if (state.step === 4) { data.location = text; state.step = 5; }
-        else if (state.step === 5) {
-            data.equipment_details = text;
-            state.phase = PHASES.POWER_CHECK;
-            state.step = 1;
-        }
-    }
-
-    // --- PHASE 2: POWER CHECK ---
-    else if (state.phase === PHASES.POWER_CHECK) {
-        if (lowText.includes('yes')) {
-            data.power_status = "Confirmed";
-            state.phase = PHASES.UNIVERSAL_ENGINE;
-            state.step = 1;
-        } else if (lowText.includes('no')) {
-            data.power_status = "No Power";
-            state.phase = PHASES.POWER_SUBPATH;
-            state.step = 1;
-        } else {
-            return "Please reply with Yes or No.";
-        }
-    }
-
-    else if (state.phase === PHASES.POWER_SUBPATH) {
-        const cat = parseInt(data.category_id);
-
-        if (lowText.includes('yes')) {
-            data.power_status = "Restored after check";
-            state.phase = PHASES.UNIVERSAL_ENGINE;
-            state.step = 1;
-        } else if (lowText.includes('no')) {
-            state.step++;
-
-            // Logic for when to stop subpath and escalate
-            let maxSubSteps = 1;
-            if ([2, 3, 1, 5, 15, 16, 17, 18, 6, 7, 8].includes(cat)) maxSubSteps = 3;
-            if (cat === 4) maxSubSteps = 1;
-
-            if (state.step > maxSubSteps) {
-                data.power_status = "Electrical fault escalated";
-                state.phase = PHASES.UNIVERSAL_ENGINE;
-                state.step = 1;
-            }
-        } else {
-            return "Please reply with Yes or No.";
-        }
-    }
-
-    // --- PHASE 3: UNIVERSAL ENGINE ---
-    else if (state.phase === PHASES.UNIVERSAL_ENGINE) {
-        if (state.step === 1) {
-            const supplies = ["", "All confirmed", "Water supply missing", "Gas supply missing", "Not sure"];
-            data.supplies = supplies[parseInt(text)] || text;
-            state.step = 2;
-        }
-        else if (state.step === 2) {
-            const safety = ["", "All correct", "Door/seal issue", "Safety guard missing", "Safety risk — persons may be at risk"];
-            data.safety = safety[parseInt(text)] || text;
-            if (text.includes('4') || lowText.includes('risk')) {
-                data.priority = "EMERGENCY — SAFETY RISK";
-                state.phase = PHASES.REPORT_CONFIRM;
-            } else {
-                state.step = 3;
-            }
-        }
-        else if (state.step === 3) {
-            const failures = ["", "Cooling", "Heating", "Cutting", "Mixing", "Rotating", "Pumping", "Dispensing", "Sealing", "Display", "Other"];
-            data.failing_to = failures[parseInt(text)] || text;
-            state.step = 4;
-        }
-        else if (state.step === 4) {
-            data.mechanical = text;
-            if (text.includes('6') || lowText.includes('burning')) {
-                data.priority = "EMERGENCY — FIRE RISK";
-                state.phase = PHASES.REPORT_CONFIRM;
-            } else {
-                state.phase = PHASES.CATEGORY_DIAGNOSTIC;
-                state.step = 1;
-            }
-        }
-    }
-
-    // --- PHASE 4: CATEGORY DIAGNOSTIC ---
-    else if (state.phase === PHASES.CATEGORY_DIAGNOSTIC) {
-        if (!data.diagnostic) data.diagnostic = [];
-
-        const cat = parseInt(data.category_id);
-        const flow = DIAGNOSTIC_FLOW[cat] || [];
-
-        // Save answer if current question has an ID
-        const currentQ = flow[state.step - 1];
-        if (currentQ && currentQ.id) {
-            data[currentQ.id] = text;
-        }
-
-        data.diagnostic.push(text);
-        state.step++;
-
-        // Check if we should skip the NEXT question(s)
-        while (state.step <= flow.length) {
-            const nextQ = flow[state.step - 1];
-            if (nextQ.skip && nextQ.skip(data)) {
-                state.step++;
-            } else {
-                break;
-            }
-        }
-
-        // Check for emergency escalation in F&V (Exposed wire)
-        if (cat === 18 && data.wire_exposed && (data.wire_exposed.toLowerCase().includes('yes') || data.wire_exposed.toLowerCase().includes('stop'))) {
-            data.priority = "EMERGENCY — EXPOSED WIRE";
-            state.phase = PHASES.REPORT_CONFIRM;
-            return null;
-        }
-
-        if (state.step > flow.length) {
-            state.phase = PHASES.MEDIA_PRIORITY;
-            state.step = 1;
-        }
-    }
-
-    // --- PHASE 5: MEDIA & PRIORITY ---
-    else if (state.phase === PHASES.MEDIA_PRIORITY) {
-        if (state.step === 1) { data.photo = text; state.step = 2; }
-        else if (state.step === 2) {
-            const priorities = ["", "Emergency 1h", "Urgent 4h", "High 24h", "Routine"];
-            data.priority = priorities[parseInt(text)] || text;
-            state.phase = PHASES.REPORT_CONFIRM;
-        }
-    }
-
-    // --- PHASE 6: REPORT CONFIRM ---
-    else if (state.phase === PHASES.REPORT_CONFIRM) {
-        if (lowText.includes('yes')) {
-            state.phase = PHASES.COMPLETED;
-            return "SUCCESS";
-        } else if (lowText.includes('no')) {
-            return "RESTART";
-        } else {
-            return "Please reply YES to submit or NO to restart.";
-        }
-    }
-
+  // Global Emergency Override
+  if (detectEmergency(text)) {
+    data.safetyRisk = 'Emergency Triggered';
+    data.emergencyType = text;
+    data.priority = calculatePriority(data);
+    state.phase = PHASES.REPORT_CONFIRM;
     return null;
+  }
+
+  // --- PHASE 1: IDENTIFICATION ---
+  if (state.phase === PHASES.IDENTIFICATION) {
+    if (state.step === 'STORE') { data.store = text; state.step = 'REPORTER'; }
+    else if (state.step === 'REPORTER') { data.reporter = text; state.step = 'CATEGORY'; }
+    else if (state.step === 'CATEGORY') {
+      const cats = Object.keys(CATEGORY_EQUIPMENT);
+      const idx = parseInt(text) - 1;
+      const selected = cats[idx] || cats.find(c => c.toLowerCase() === lowText);
+      if (selected) { data.category = selected; state.step = 'EQUIPMENT'; }
+      else return "Invalid category selection.";
+    }
+    else if (state.step === 'EQUIPMENT') {
+      const equips = CATEGORY_EQUIPMENT[data.category];
+      const idx = parseInt(text) - 1;
+      const selected = equips[idx] || equips.find(e => e.toLowerCase() === lowText);
+      if (selected) {
+        data.equipment = selected;
+        data.assetProfile = ASSET_PROFILES[selected];
+        state.step = 'LOCATION';
+      }
+      else return "Invalid equipment selection.";
+    }
+    else if (state.step === 'LOCATION') { data.equipmentLocation = text; state.step = 'BRAND'; }
+    else if (state.step === 'BRAND') { data.brand = text; state.step = 'MODEL'; }
+    else if (state.step === 'MODEL') { data.model = text; state.step = 'TAG'; }
+    else if (state.step === 'TAG') { data.assetTag = text; state.step = 'SERIAL'; }
+    else if (state.step === 'SERIAL') {
+      data.serialNumber = text;
+      if (data.assetProfile?.requiresPower) {
+        state.phase = PHASES.POWER_CHECK;
+        state.step = 1;
+      } else {
+        state.phase = PHASES.UNIVERSAL_ENGINE;
+        state.step = 'SAFETY';
+      }
+    }
+  }
+
+  // --- PHASE 2: POWER CHECK ---
+  else if (state.phase === PHASES.POWER_CHECK) {
+    if (lowText.includes('yes')) {
+      data.powerStatus = 'Confirmed';
+      state.phase = PHASES.UNIVERSAL_ENGINE;
+      state.step = 'SAFETY';
+    } else {
+      data.powerStatus = 'No Power';
+      state.phase = PHASES.POWER_SUBPATH;
+      state.step = 1;
+    }
+  }
+
+  else if (state.phase === PHASES.POWER_SUBPATH) {
+    if (lowText.includes('yes')) {
+      data.powerStatus = 'Restored';
+      state.phase = PHASES.UNIVERSAL_ENGINE;
+      state.step = 'SAFETY';
+    } else {
+      state.step = parseInt(state.step) + 1;
+      const path = data.assetProfile?.powerPath || 'B';
+      const max = (path === 'A' || path === 'B' || path === 'C') ? 3 : 2;
+      if (state.step > max) {
+        data.powerStatus = 'Electrical fault escalated';
+        state.phase = PHASES.UNIVERSAL_ENGINE;
+        state.step = 'SAFETY';
+      }
+    }
+  }
+
+  // --- PHASE 3: UNIVERSAL ENGINE ---
+  else if (state.phase === PHASES.UNIVERSAL_ENGINE) {
+    if (!data.mechanicalResults) data.mechanicalResults = {};
+    if (state.step === 'SAFETY') { data.safetyRisk = text; state.step = 'IMPACT'; }
+    else if (state.step === 'IMPACT') {
+      const opts = ['No Impact', 'Minor Impact', 'Department Impact', 'Multiple Departments', 'Store Wide', 'Trading Stopped'];
+      data.operationalImpact = opts[parseInt(text)-1] || text;
+      state.step = 'FAULT_TYPE';
+    }
+    else if (state.step === 'FAULT_TYPE') {
+      const opts = ['Not Cooling', 'Not Heating', 'Not Starting', 'Leak', 'Noise', 'Vibration', 'Damage', 'Other'];
+      data.faultType = opts[parseInt(text)-1] || text;
+      state.step = 'MECH_NOISE';
+    }
+    else if (state.step === 'MECH_NOISE') { data.mechanicalResults["Unusual Noise"] = text; state.step = 'MECH_JAM'; }
+    else if (state.step === 'MECH_JAM') { data.mechanicalResults["Jam/Blockage"] = text; state.step = 'MECH_LEAK'; }
+    else if (state.step === 'MECH_LEAK') { data.mechanicalResults["Visible Leak"] = text; state.step = 'MECH_VIB'; }
+    else if (state.step === 'MECH_VIB') { data.mechanicalResults["Excess Vibration"] = text; state.step = 'MECH_BURN'; }
+    else if (state.step === 'MECH_BURN') {
+      data.mechanicalResults["Burning Smell"] = text;
+      if (lowText.includes('yes')) {
+         data.emergencyType = 'Burning Smell';
+         data.priority = calculatePriority(data);
+         state.phase = PHASES.REPORT_CONFIRM;
+      } else {
+         state.step = 'MECH_DMG';
+      }
+    }
+    else if (state.step === 'MECH_DMG') {
+      data.mechanicalResults["Visible Damage"] = text;
+      state.phase = PHASES.CATEGORY_DIAGNOSTIC;
+      state.step = 0;
+    }
+  }
+
+  // --- PHASE 4: CATEGORY DIAGNOSTIC ---
+  else if (state.phase === PHASES.CATEGORY_DIAGNOSTIC) {
+    if (!data.diagnosticResults) data.diagnosticResults = {};
+    if (!data.diagnosticRaw) data.diagnosticRaw = {}; // For conditionals using IDs
+
+    const questions = DIAGNOSTIC_QUESTIONS[data.assetProfile?.diagnosticProfile] || [];
+    let qIdx = parseInt(state.step);
+
+    const q = questions[qIdx];
+    if (q) {
+      const answer = q.options ? (q.options[parseInt(text)-1] || text) : text;
+      data.diagnosticResults[q.text] = answer;
+      data.diagnosticRaw[q.id] = answer;
+    }
+
+    qIdx++;
+    while (qIdx < questions.length && questions[qIdx].conditional && !questions[qIdx].conditional(data.diagnosticRaw)) {
+      qIdx++;
+    }
+
+    state.step = qIdx;
+    if (state.step >= questions.length) {
+      if (data.assetProfile?.foodSafety) {
+        state.phase = PHASES.FOOD_SAFETY;
+        state.step = 0;
+      } else {
+        state.phase = PHASES.MEDIA_PRIORITY;
+        state.step = 'PHOTO';
+      }
+    }
+  }
+
+  // --- PHASE 5: FOOD SAFETY ---
+  else if (state.phase === PHASES.FOOD_SAFETY) {
+    if (!data.foodSafetyResults) data.foodSafetyResults = {};
+    let qIdx = parseInt(state.step);
+    const q = FOOD_SAFETY_QUESTIONS[qIdx];
+
+    const ans = ['Yes', 'No', 'Unknown'][parseInt(text)-1] || text;
+    data.foodSafetyResults[q.id] = ans;
+
+    // Map to foodSafetyRisk object for priority engine
+    if (!data.foodSafetyRisk) data.foodSafetyRisk = {};
+    if (q.id === 'FS_COLDCHAIN' && ans === 'Yes') data.foodSafetyRisk.coldChainCompromised = true;
+    if (q.id === 'FS_PRODTEMP' && ans === 'Yes') data.foodSafetyRisk.productAboveTemp = true;
+    if (q.id === 'FS_STOCK' && ans === 'Yes') data.foodSafetyRisk.stockAtRisk = true;
+
+    qIdx++;
+    state.step = qIdx;
+    if (state.step >= FOOD_SAFETY_QUESTIONS.length) {
+      state.phase = PHASES.MEDIA_PRIORITY;
+      state.step = 'PHOTO';
+    }
+  }
+
+  // --- PHASE 6: MEDIA & PRIORITY ---
+  else if (state.phase === PHASES.MEDIA_PRIORITY) {
+    if (state.step === 'PHOTO') { data.photoAttached = lowText.includes('yes'); state.step = 'PRIORITY'; }
+    else if (state.step === 'PRIORITY') {
+      data.priority = calculatePriority(data);
+      data.outcome = determineOutcome(data);
+      state.phase = PHASES.REPORT_CONFIRM;
+    }
+  }
+
+  // --- PHASE 7: REPORT CONFIRM ---
+  else if (state.phase === PHASES.REPORT_CONFIRM) {
+    if (lowText === 'yes') {
+      state.phase = PHASES.COMPLETED;
+      return "SUCCESS";
+    } else if (lowText === 'no') {
+      return "RESTART";
+    }
+  }
+
+  return null;
 }
 
-function generateReport(session) {
-    const data = session.data;
-    if (!data.ticket_id) {
-        data.ticket_id = 'TKT-' + Math.random().toString(36).substr(2, 6).toUpperCase();
-    }
+function generateReportText(session) {
+  const d = session.data;
+  const p = d.priority || calculatePriority(d);
+  if (!d.ticketId) d.ticketId = generateTicketId();
 
-    return `━━━ FM FAULT REPORT #${data.ticket_id} ━━━
-📍 Store / Branch:     ${data.store || 'N/A'}
-👤 Reported by:        ${data.reporter || 'N/A'}
-📅 Date & time:        ${new Date().toLocaleString()}
+  let findings = "";
+  if (d.mechanicalResults) {
+    findings += Object.entries(d.mechanicalResults)
+      .filter(([k, v]) => v.toLowerCase().includes('yes'))
+      .map(([k, v]) => `• ${k}`)
+      .join('\n');
+  }
+  if (d.diagnosticResults) {
+    if (findings) findings += "\n";
+    findings += Object.entries(d.diagnosticResults)
+      .map(([k, v]) => `• ${k}: ${v}`)
+      .join('\n');
+  }
 
-🔧 Category:           ${data.category || 'N/A'}
-📦 Equipment:          ${data.equipment_details || 'N/A'}
-📍 Location:           ${data.location || 'N/A'}
+  return `━━━ FM FAULT REPORT #${d.ticketId} ━━━
+📍 Store:      ${d.store}
+👤 Reporter:   ${d.reporter}
+🔧 Asset:      ${d.equipment} (${d.category})
+🏷️ Details:    ${d.brand} | ${d.model} | Tag: ${d.assetTag || d.tag}
+🔖 S/N:        ${d.serialNumber}
+📍 Location:   ${d.equipmentLocation}
 
-⚡ Power status:       ${data.power_status || 'N/A'}
-⚙️ Failing to:         ${data.failing_to || 'N/A'}
-📝 Other findings:     ${(data.diagnostic || []).join(' | ')}
+⚡ Power:      ${d.powerStatus || 'N/A'}
+⚠️ Fault:      ${d.faultType}
+⚙️ Findings:
+${findings || 'No specific findings recorded'}
 
-🔴 Priority / SLA:     ${data.priority || 'N/A'}
-👷 Technician needed:  Yes
-📸 Photo attached:     ${data.photo || 'No'}
+🔴 Priority:   ${p.label} (${p.sla})
+👷 Tech:       ${determineOutcome(d)}
 ━━━━━━━━━━━━━━━━━━━━━━━━`;
 }
 
+async function saveTicketToSupabase(session) {
+  if (!supabase) return;
+  const d = session.data;
+  const p = d.priority || calculatePriority(d);
+  const outcome = determineOutcome(d);
+
+  const report = {
+    ticket_id: d.ticketId,
+    store: d.store,
+    reporter: d.reporter,
+    category: d.category,
+    equipment: d.equipment,
+    location: d.equipmentLocation,
+    brand: d.brand,
+    model: d.model,
+    asset_tag: d.assetTag || d.tag,
+    serial_number: d.serialNumber,
+    criticality: d.assetProfile?.criticality,
+    power_status: d.powerStatus,
+    fault_type: d.faultType,
+    safety_risk: d.safetyRisk,
+    emergency_type: d.emergencyType || 'None',
+    operational_impact: d.operationalImpact,
+    priority: p.label,
+    priority_level: p.level,
+    sla: p.sla,
+    service_provider: d.assetProfile?.provider || 'FM Manager',
+    outcome: outcome,
+    technician_required: outcome.includes('Technician') || outcome.includes('Emergency'),
+    photo_attached: d.photoAttached || false,
+    status: 'Open'
+  };
+
+  try {
+    const { error } = await supabase.from('tickets').insert(report);
+    if (error) console.error('Supabase save error:', error);
+
+    if (d.diagnosticRaw) {
+      const findings = Object.entries(d.diagnosticRaw).map(([k, v]) => ({
+        ticket_id: d.ticketId,
+        finding_key: k,
+        finding_value: String(v)
+      }));
+      await supabase.from('ticket_findings').insert(findings);
+    }
+
+    if (d.foodSafetyResults) {
+      await supabase.from('ticket_food_safety').insert({
+        ticket_id: d.ticketId,
+        cold_chain_compromised: d.foodSafetyResults.FS_COLDCHAIN === 'Yes',
+        product_above_temp: d.foodSafetyResults.FS_PRODTEMP === 'Yes',
+        contamination_risk: d.foodSafetyResults.FS_CONTAM === 'Yes',
+        production_stopped: d.foodSafetyResults.FS_PRODUCTION === 'Yes',
+        stock_at_risk: d.foodSafetyResults.FS_STOCK === 'Yes'
+      });
+    }
+  } catch (e) {
+    console.error('Failed to save to Supabase:', e);
+  }
+}
+
 async function getLogicResponse(userId, userMessage, session) {
-    if (userMessage.toLowerCase() === 'reset' || userMessage.toLowerCase() === 'restart') {
-        session.state = { phase: PHASES.IDENTIFICATION, step: 1 };
-        session.data = {};
-        return getNextQuestion(session);
-    }
+  if (userMessage.toLowerCase() === 'reset' || userMessage.toLowerCase() === 'restart' || userMessage.toLowerCase() === 'log a fault') {
+    session.state = { phase: PHASES.IDENTIFICATION, step: 'STORE' };
+    session.data = { ticketId: generateTicketId() };
+    return "Good day! I'm FM Assist V2. Let's log your fault.\n\n" + getNextQuestion(session);
+  }
 
-    if (!session.state || session.state.phase === PHASES.COMPLETED) {
-        session.state = { phase: PHASES.IDENTIFICATION, step: 1 };
-        session.data = {};
-        return "Good day! I'm FM Assist. Let's log your fault.\n\n" + getNextQuestion(session);
-    }
+  if (!session.state || session.state.phase === PHASES.COMPLETED) {
+    session.state = { phase: PHASES.IDENTIFICATION, step: 'STORE' };
+    session.data = { ticketId: generateTicketId() };
+    return "Good day! Let's get started.\n\n" + getNextQuestion(session);
+  }
 
-    const result = handleInput(session, userMessage);
+  const result = handleInput(session, userMessage);
 
-    if (userMessage.toLowerCase() === 'log a fault') {
-        session.state = { phase: PHASES.IDENTIFICATION, step: 1 };
-        session.data = {};
-        return getNextQuestion(session);
-    }
+  if (result === "SUCCESS") {
+    await saveTicketToSupabase(session);
+    const report = generateReportText(session);
+    session.state = { phase: PHASES.COMPLETED };
+    return "Thank you! Your report has been submitted successfully.\n\n" + report;
+  }
 
-    if (result === "SUCCESS") {
-        const report = generateReport(session);
-        session.state = { phase: PHASES.COMPLETED };
-        return "Thank you! Your report has been submitted successfully. [TICKET #" + session.data.ticket_id + "]\n\n" + report;
-    }
+  if (result === "RESTART") {
+    session.state = { phase: PHASES.IDENTIFICATION, step: 'STORE' };
+    session.data = { ticketId: generateTicketId() };
+    return "Okay, starting over.\n\n" + getNextQuestion(session);
+  }
 
-    if (result === "RESTART") {
-        session.state = { phase: PHASES.IDENTIFICATION, step: 1 };
-        session.data = {};
-        return "Okay, let's start over.\n\n" + getNextQuestion(session);
-    }
+  if (typeof result === 'string') return result;
 
-    if (typeof result === 'string') return result;
-
-    return getNextQuestion(session);
+  return getNextQuestion(session);
 }
 
 module.exports = { getLogicResponse, PHASES };
