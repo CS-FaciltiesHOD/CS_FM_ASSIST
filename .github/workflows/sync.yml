@@ -37,6 +37,8 @@ jobs:
 
           # Remove old chatbot files in api to prevent conflicts (including PHP)
           rm -rf target/api/*
+          # Remove legacy configuration files that might interfere with Vercel build
+          rm -f target/now.json
 
           # Copy chatbot logic
           cp -r source/api/* target/api/
