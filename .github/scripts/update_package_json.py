@@ -40,6 +40,12 @@ def update_package_json(target_path, source_path):
                 added = True
                 print(f"Added {dep}@{source_deps[dep]} to target.")
 
+        # Ensure engines field is synced to guide Vercel runtime selection
+        if 'engines' in source_data:
+            target_data['engines'] = source_data['engines']
+            added = True
+            print(f"Synced engines field: {source_data['engines']}")
+
         if added:
             with open(target_path, 'w') as f:
                 json.dump(target_data, f, indent=2)

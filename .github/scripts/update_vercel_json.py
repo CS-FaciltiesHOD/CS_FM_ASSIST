@@ -30,18 +30,14 @@ def update_vercel(target_path):
     data['rewrites'] = new_rewrites + [r for r in data['rewrites'] if r.get('source') not in current_sources]
 
     # COMPREHENSIVE RUNTIME FIX:
-    # Clear legacy blocks that trigger "Function Runtimes" errors.
-    for legacy_key in ['builds', 'builders']:
+    # Clear blocks that trigger legacy "Function Runtimes" errors.
+    # Modern Vercel deployments (Project Type: Other/Node) often conflict with
+    # explicit functions/runtimes if the project is being detected as something else.
+    # We remove these and rely on package.json "engines" and auto-detection.
+    for legacy_key in ['builds', 'builders', 'functions']:
         if legacy_key in data:
-            print(f"Removing legacy '{legacy_key}' field from vercel.json.")
+            print(f"Removing '{legacy_key}' field from vercel.json to avoid runtime conflicts.")
             del data[legacy_key]
-
-    # Clear the entire functions block and set only what we need.
-    # This removes the broken 'now-php' runtimes causing the deployment failure.
-    print("Resetting 'functions' configuration to ensure valid Node.js runtimes.")
-    data['functions'] = {
-        "api/**/*.js": { "runtime": "nodejs20.x" }
-    }
 
     # Ensure version 2 is set
     data['version'] = 2

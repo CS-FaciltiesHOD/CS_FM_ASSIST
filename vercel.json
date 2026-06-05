@@ -4,10 +4,5 @@
     { "source": "/api/chat", "destination": "/api/chat.js" },
     { "source": "/api/webhook/whatsapp", "destination": "/api/webhook/whatsapp.js" },
     { "source": "/api/webhook/telegram", "destination": "/api/webhook/telegram.js" }
-  ],
-  "functions": {
-    "api/**/*.js": {
-      "runtime": "nodejs20.x"
-    }
-  }
+  ]
 }
