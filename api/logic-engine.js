@@ -771,12 +771,18 @@ function generateTicketId() {
 }
 
 function determineOutcome(state) {
-  const values = Object.values(state.diagnosticResults || {});
-  const hasNo = values.some(v => v === 'No' || v === 'None spinning' || (typeof v === 'string' && (v.startsWith('No') || v.includes('None') || v.includes('not'))));
+  const diagValues = Object.values(state.diagnosticResults || {});
+  const mechValues = {...(state.mechanicalResults || {})};
 
-  if (state.emergencyType && state.emergencyType !== 'None') return 'Emergency Escalation';
+  // Power light being ON is good, so exclude from "issue" detection if it is Yes
+  delete mechValues["Power Light On"];
+
+  const hasDiagIssue = diagValues.some(v => v === 'No' || v === 'None spinning' || (typeof v === 'string' && (v.startsWith('No') || v.includes('None') || v.includes('not'))));
+  const hasMechIssue = Object.values(mechValues).some(v => String(v).toLowerCase().startsWith('yes'));
+
+  if (state.emergencyDetected) return 'Emergency Escalation';
   if (state.powerStatus === 'Electrical fault escalated') return 'Technician Required';
-  if (hasNo) return 'Technician Required';
+  if (hasDiagIssue || hasMechIssue) return 'Technician Required';
   return 'Monitor';
 }
 
@@ -804,10 +810,10 @@ function getNextQuestion(session) {
         equipList.forEach((name, i) => { eMsg += `${i + 1}. ${name}\n`; });
         return eMsg;
       case 'LOCATION': return "Where exactly is the unit located? (e.g. Aisle 3, Bakery)";
-      case 'BRAND': return "What is the Brand of the equipment? (Type 'unknown' if not found)";
-      case 'MODEL': return "What is the Model? (Type 'unknown' if not found)";
-      case 'TAG': return "What is the Asset Tag? (Type 'unknown' if not found)";
-      case 'SERIAL': return "What is the Serial Number? (Type 'unknown' if not found)";
+      case 'BRAND': return "What is the Brand of the equipment? (Type 'N/A' to skip)";
+      case 'MODEL': return "What is the Model? (Type 'N/A' to skip)";
+      case 'TAG': return "What is the Asset Tag? (Type 'N/A' to skip)";
+      case 'SERIAL': return "What is the Serial Number? (Type 'N/A' to skip)";
     }
   }
 
@@ -849,6 +855,8 @@ function getNextQuestion(session) {
         ['Not Cooling', 'Not Heating', 'Not Starting', 'Leak', 'Noise', 'Vibration', 'Damage', 'Other'].forEach((opt, i) => { fMsg += `${i+1}. ${opt}\n`; });
         return fMsg;
       // Mechanical Yes/No questions (1 by 1)
+      case 'MECH_POWER_LIGHT': return "Is the unit's power light on? (Yes / No / N/A)";
+      case 'MECH_DISPLAY_ERR': return "Is there an error code on the display? (Yes - provide code / No / N/A)";
       case 'MECH_NOISE': return "Is there any unusual noise? (Yes / No)";
       case 'MECH_JAM': return "Is there a jam or blockage? (Yes / No)";
       case 'MECH_LEAK': return "Is there a visible leak? (Yes / No)";
@@ -885,8 +893,9 @@ function getNextQuestion(session) {
     if (state.step === 'PHOTO') return "Can you take a photo/video? Send it via WhatsApp if possible. (Yes - sending / No)";
     if (state.step === 'PRIORITY') {
       const p = calculatePriority(data);
-      return `Calculated Priority: ${p.label} (SLA: ${p.sla}). Is this acceptable? (Yes / No - provide reason)`;
+      return `Calculated Priority: ${p.label} (SLA: ${p.sla}). Is this acceptable? (Yes / No)`;
     }
+    if (state.step === 'PRIORITY_REASON') return "Please provide the reason why the calculated priority is not acceptable:";
   }
 
   // --- PHASE 7: REPORT CONFIRM ---
@@ -907,14 +916,12 @@ function handleInput(session, input) {
   const state = session.state;
 
   // Global Emergency Override
-  // Fires at any point EXCEPT when we are explicitly asking about burning smell in the mechanical check
-  const isMechanicalBurningCheck = state.phase === PHASES.UNIVERSAL_ENGINE && state.step === 'MECH_BURN';
-  if (detectEmergency(text) && !isMechanicalBurningCheck) {
+  // If an emergency is detected, we set the flag and priority but CONTINUE.
+  if (detectEmergency(text)) {
+    data.emergencyDetected = true;
+    data.emergencyType = (data.emergencyType && data.emergencyType !== 'None') ? `${data.emergencyType}, ${text}` : text;
     data.safetyRisk = 'Emergency Triggered';
-    data.emergencyType = text;
     data.priority = calculatePriority(data);
-    state.phase = PHASES.REPORT_CONFIRM;
-    return null;
   }
 
   // --- PHASE 1: IDENTIFICATION ---
@@ -997,8 +1004,10 @@ function handleInput(session, input) {
     else if (state.step === 'FAULT_TYPE') {
       const opts = ['Not Cooling', 'Not Heating', 'Not Starting', 'Leak', 'Noise', 'Vibration', 'Damage', 'Other'];
       data.faultType = opts[parseInt(text)-1] || text;
-      state.step = 'MECH_NOISE';
+      state.step = 'MECH_POWER_LIGHT';
     }
+    else if (state.step === 'MECH_POWER_LIGHT') { data.mechanicalResults["Power Light On"] = text; state.step = 'MECH_DISPLAY_ERR'; }
+    else if (state.step === 'MECH_DISPLAY_ERR') { data.mechanicalResults["Display Error"] = text; state.step = 'MECH_NOISE'; }
     else if (state.step === 'MECH_NOISE') { data.mechanicalResults["Unusual Noise"] = text; state.step = 'MECH_JAM'; }
     else if (state.step === 'MECH_JAM') { data.mechanicalResults["Jam/Blockage"] = text; state.step = 'MECH_LEAK'; }
     else if (state.step === 'MECH_LEAK') { data.mechanicalResults["Visible Leak"] = text; state.step = 'MECH_VIB'; }
@@ -1006,8 +1015,8 @@ function handleInput(session, input) {
     else if (state.step === 'MECH_BURN') {
       data.mechanicalResults["Burning Smell"] = text;
       if (lowText.includes('yes')) {
-         data.emergencyType = 'Burning Smell';
-         // Set emergency priority but CONTINUE with remaining questions as per user request
+         data.emergencyDetected = true;
+         data.emergencyType = (data.emergencyType && data.emergencyType !== 'None') ? `${data.emergencyType}, Burning Smell` : 'Burning Smell';
          data.priority = calculatePriority(data);
       }
       state.step = 'MECH_DMG';
@@ -1078,6 +1087,18 @@ function handleInput(session, input) {
   else if (state.phase === PHASES.MEDIA_PRIORITY) {
     if (state.step === 'PHOTO') { data.photoAttached = lowText.includes('yes'); state.step = 'PRIORITY'; }
     else if (state.step === 'PRIORITY') {
+      if (lowText.includes('no')) {
+        state.step = 'PRIORITY_REASON';
+      } else {
+        data.priorityAccepted = true;
+        data.priority = calculatePriority(data);
+        data.outcome = determineOutcome(data);
+        state.phase = PHASES.REPORT_CONFIRM;
+      }
+    }
+    else if (state.step === 'PRIORITY_REASON') {
+      data.priorityAccepted = false;
+      data.priorityRejectionReason = text;
       data.priority = calculatePriority(data);
       data.outcome = determineOutcome(data);
       state.phase = PHASES.REPORT_CONFIRM;
@@ -1090,6 +1111,7 @@ function handleInput(session, input) {
       state.phase = PHASES.COMPLETED;
       return "SUCCESS";
     } else if (lowText === 'no') {
+      data.userRequestedRestart = true;
       return "RESTART";
     }
   }
@@ -1218,14 +1240,21 @@ async function getLogicResponse(userId, userMessage, session) {
   }
 
   if (result === "RESTART") {
+    const reason = session.data?.userRequestedRestart ? "(User requested restart at confirmation)" : "";
     session.state = { phase: PHASES.IDENTIFICATION, step: 'STORE' };
-    session.data = { ticketId: generateTicketId() };
-    return "Okay, starting over.\n\n" + getNextQuestion(session);
+    session.data = { ticketId: generateTicketId(), restartReason: reason };
+    return "Okay, opening a new report.\n\n" + getNextQuestion(session);
   }
 
   if (typeof result === 'string') return result;
 
-  return getNextQuestion(session);
+  let response = getNextQuestion(session);
+
+  if (session.data?.emergencyDetected) {
+    response = "⚠️ EMERGENCY: Please have someone call the Facilities Manager immediately.\n\n" + response;
+  }
+
+  return response;
 }
 
 module.exports = {

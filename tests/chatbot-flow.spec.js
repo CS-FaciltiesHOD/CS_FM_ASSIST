@@ -3,6 +3,7 @@ const { test, expect } = require('@playwright/test');
 /**
  * This test verifies the complete end-to-end flow of the FM Assist chatbot.
  * It uses a local test server to host the chatbot and the API.
+ * Note: Sequential flow updated to V2 1-by-1 logic.
  */
 test('Chatbot full diagnostic flow', async ({ page }) => {
   // 1. Open the main page (Assuming the server is running on port 3000)
@@ -30,15 +31,31 @@ test('Chatbot full diagnostic flow', async ({ page }) => {
   await iframe.locator('#fm-send-btn').click();
 
   await expect(iframe.locator('.fm-msg.bot').last()).toContainText('equipment category');
-  await iframe.locator('#fm-input').fill('1'); // Refrigeration — Upright fridge
+  await iframe.locator('#fm-input').fill('1'); // Refrigeration
+  await iframe.locator('#fm-send-btn').click();
+
+  await expect(iframe.locator('.fm-msg.bot').last()).toContainText('specific equipment');
+  await iframe.locator('#fm-input').fill('1'); // Upright Fridge
   await iframe.locator('#fm-send-btn').click();
 
   await expect(iframe.locator('.fm-msg.bot').last()).toContainText('Where exactly');
   await iframe.locator('#fm-input').fill('Aisle 1');
   await iframe.locator('#fm-send-btn').click();
 
-  await expect(iframe.locator('.fm-msg.bot').last()).toContainText('Equipment name');
-  await iframe.locator('#fm-input').fill('Display Fridge A1');
+  await expect(iframe.locator('.fm-msg.bot').last()).toContainText('Brand');
+  await iframe.locator('#fm-input').fill('N/A');
+  await iframe.locator('#fm-send-btn').click();
+
+  await expect(iframe.locator('.fm-msg.bot').last()).toContainText('Model');
+  await iframe.locator('#fm-input').fill('N/A');
+  await iframe.locator('#fm-send-btn').click();
+
+  await expect(iframe.locator('.fm-msg.bot').last()).toContainText('Asset Tag');
+  await iframe.locator('#fm-input').fill('N/A');
+  await iframe.locator('#fm-send-btn').click();
+
+  await expect(iframe.locator('.fm-msg.bot').last()).toContainText('Serial Number');
+  await iframe.locator('#fm-input').fill('N/A');
   await iframe.locator('#fm-send-btn').click();
 
   // Phase 2: Power Check
@@ -47,20 +64,48 @@ test('Chatbot full diagnostic flow', async ({ page }) => {
   await iframe.locator('#fm-send-btn').click();
 
   // Phase 3: Universal Engine
-  await expect(iframe.locator('.fm-msg.bot').last()).toContainText('required supplies');
-  await iframe.locator('#fm-input').fill('1'); // All confirmed
+  await expect(iframe.locator('.fm-msg.bot').last()).toContainText('safety risks');
+  await iframe.locator('#fm-input').fill('No risk');
   await iframe.locator('#fm-send-btn').click();
 
-  await expect(iframe.locator('.fm-msg.bot').last()).toContainText('safety conditions');
-  await iframe.locator('#fm-input').fill('1'); // All correct
+  await expect(iframe.locator('.fm-msg.bot').last()).toContainText('operational impact');
+  await iframe.locator('#fm-input').fill('1');
   await iframe.locator('#fm-send-btn').click();
 
-  await expect(iframe.locator('.fm-msg.bot').last()).toContainText('failing to do');
-  await iframe.locator('#fm-input').fill('1'); // Cooling
+  await expect(iframe.locator('.fm-msg.bot').last()).toContainText('primary fault type');
+  await iframe.locator('#fm-input').fill('1');
   await iframe.locator('#fm-send-btn').click();
 
-  await expect(iframe.locator('.fm-msg.bot').last()).toContainText('following present');
-  await iframe.locator('#fm-input').fill('1'); // None
+  await expect(iframe.locator('.fm-msg.bot').last()).toContainText('power light');
+  await iframe.locator('#fm-input').fill('Yes');
+  await iframe.locator('#fm-send-btn').click();
+
+  await expect(iframe.locator('.fm-msg.bot').last()).toContainText('error code');
+  await iframe.locator('#fm-input').fill('No');
+  await iframe.locator('#fm-send-btn').click();
+
+  await expect(iframe.locator('.fm-msg.bot').last()).toContainText('unusual noise');
+  await iframe.locator('#fm-input').fill('No');
+  await iframe.locator('#fm-send-btn').click();
+
+  await expect(iframe.locator('.fm-msg.bot').last()).toContainText('jam or blockage');
+  await iframe.locator('#fm-input').fill('No');
+  await iframe.locator('#fm-send-btn').click();
+
+  await expect(iframe.locator('.fm-msg.bot').last()).toContainText('visible leak');
+  await iframe.locator('#fm-input').fill('No');
+  await iframe.locator('#fm-send-btn').click();
+
+  await expect(iframe.locator('.fm-msg.bot').last()).toContainText('excess vibration');
+  await iframe.locator('#fm-input').fill('No');
+  await iframe.locator('#fm-send-btn').click();
+
+  await expect(iframe.locator('.fm-msg.bot').last()).toContainText('burning smell');
+  await iframe.locator('#fm-input').fill('No');
+  await iframe.locator('#fm-send-btn').click();
+
+  await expect(iframe.locator('.fm-msg.bot').last()).toContainText('visible damage');
+  await iframe.locator('#fm-input').fill('No');
   await iframe.locator('#fm-send-btn').click();
 
   // Phase 4: Category Diagnostic (Upright Fridge)
@@ -68,12 +113,16 @@ test('Chatbot full diagnostic flow', async ({ page }) => {
   await iframe.locator('#fm-input').fill('10');
   await iframe.locator('#fm-send-btn').click();
 
+  await expect(iframe.locator('.fm-msg.bot').last()).toContainText('active alarm');
+  await iframe.locator('#fm-input').fill('No');
+  await iframe.locator('#fm-send-btn').click();
+
   await expect(iframe.locator('.fm-msg.bot').last()).toContainText('airflow blowing');
   await iframe.locator('#fm-input').fill('Yes');
   await iframe.locator('#fm-send-btn').click();
 
   await expect(iframe.locator('.fm-msg.bot').last()).toContainText('base fans');
-  await iframe.locator('#fm-input').fill('All');
+  await iframe.locator('#fm-input').fill('1');
   await iframe.locator('#fm-send-btn').click();
 
   await expect(iframe.locator('.fm-msg.bot').last()).toContainText('stagnant water');
@@ -84,22 +133,49 @@ test('Chatbot full diagnostic flow', async ({ page }) => {
   await iframe.locator('#fm-input').fill('No');
   await iframe.locator('#fm-send-btn').click();
 
-  // Test branching: Reply NO to AHT Freor should skip the next question
+  await expect(iframe.locator('.fm-msg.bot').last()).toContainText('door seals');
+  await iframe.locator('#fm-input').fill('1');
+  await iframe.locator('#fm-send-btn').click();
+
+  await expect(iframe.locator('.fm-msg.bot').last()).toContainText('product temperature');
+  await iframe.locator('#fm-input').fill('1');
+  await iframe.locator('#fm-send-btn').click();
+
   await expect(iframe.locator('.fm-msg.bot').last()).toContainText('AHT Freor unit');
   await iframe.locator('#fm-input').fill('No');
   await iframe.locator('#fm-send-btn').click();
 
-  // Phase 5: Media & Priority
-  // This should be the photo question if skip worked
-  await expect(iframe.locator('.fm-msg.bot').last()).toContainText('take a photo');
+  // Phase 5: Food Safety
+  await expect(iframe.locator('.fm-msg.bot').last()).toContainText('cold chain');
+  await iframe.locator('#fm-input').fill('2'); // No
+  await iframe.locator('#fm-send-btn').click();
+
+  await expect(iframe.locator('.fm-msg.bot').last()).toContainText('safe storage temperature');
+  await iframe.locator('#fm-input').fill('2');
+  await iframe.locator('#fm-send-btn').click();
+
+  await expect(iframe.locator('.fm-msg.bot').last()).toContainText('contamination');
+  await iframe.locator('#fm-input').fill('2');
+  await iframe.locator('#fm-send-btn').click();
+
+  await expect(iframe.locator('.fm-msg.bot').last()).toContainText('production stopped');
+  await iframe.locator('#fm-input').fill('2');
+  await iframe.locator('#fm-send-btn').click();
+
+  await expect(iframe.locator('.fm-msg.bot').last()).toContainText('stock at risk');
+  await iframe.locator('#fm-input').fill('2');
+  await iframe.locator('#fm-send-btn').click();
+
+  // Phase 6: Media & Priority
+  await expect(iframe.locator('.fm-msg.bot').last()).toContainText('photo/video');
   await iframe.locator('#fm-input').fill('No');
   await iframe.locator('#fm-send-btn').click();
 
-  await expect(iframe.locator('.fm-msg.bot').last()).toContainText('How urgent');
-  await iframe.locator('#fm-input').fill('4'); // Routine
+  await expect(iframe.locator('.fm-msg.bot').last()).toContainText('Calculated Priority');
+  await iframe.locator('#fm-input').fill('Yes');
   await iframe.locator('#fm-send-btn').click();
 
-  // Phase 6: Report Confirmation
+  // Phase 7: Report Confirmation
   await expect(iframe.locator('.fm-msg.bot').last()).toContainText('FM FAULT REPORT');
   await iframe.locator('#fm-input').fill('YES');
   await iframe.locator('#fm-send-btn').click();
