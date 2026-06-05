@@ -29,7 +29,8 @@ def update_package_json(target_path, source_path):
             "node-telegram-bot-api",
             "cors",
             "dotenv",
-            "@anthropic-ai/sdk"
+            "@anthropic-ai/sdk",
+            "@supabase/supabase-js"
         ]
 
         added = False

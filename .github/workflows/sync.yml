@@ -35,11 +35,8 @@ jobs:
           # Create api directory in target if it doesn't exist
           mkdir -p target/api
 
-          # Remove old chatbot files in api to prevent conflicts
-          rm -f target/api/*.js
-          rm -f target/api/*.cjs
-          rm -f target/api/webhook/*.js
-          rm -f target/api/webhook/*.cjs
+          # Remove old chatbot files in api to prevent conflicts (including PHP)
+          rm -rf target/api/*
 
           # Copy chatbot logic
           cp -r source/api/* target/api/
