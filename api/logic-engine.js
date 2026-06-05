@@ -5,6 +5,67 @@
 
 const { createClient } = require('@supabase/supabase-js');
 
+const STORES = {
+  "1002": "uMzinyathi",
+  "1003": "Westham",
+  "1005": "Plaza",
+  "1008": "Woodview",
+  "1009": "Edendale",
+  "1010": "Bayview",
+  "1012": "Nuwest",
+  "1022": "Bizana",
+  "1024": "Moorcross",
+  "1035": "Westcliff",
+  "1037": "Montford",
+  "1038": "Himalaya",
+  "1043": "Melmoth",
+  "1058": "Kwadukuza",
+  "1060": "Marianhill",
+  "3001": "Victoria",
+  "3002": "Queen",
+  "3003": "Citygate",
+  "3004": "Isipingo",
+  "3007": "Merebank",
+  "3008": "West Street",
+  "3010": "Verulam",
+  "3011": "Stanger",
+  "3013": "Bridgecity",
+  "3014": "Starwood",
+  "3015": "Newlands",
+  "3016": "Greytown",
+  "3017": "Mbazwana",
+  "3018": "Brickfield",
+  "3020": "Alpine",
+  "3021": "Ginginlovo",
+  "3022": "Brookdale",
+  "3023": "Kenterton",
+  "3024": "Pietermaritzburg",
+  "3025": "Raisthorpe",
+  "3026": "Shallcross",
+  "3027": "Richmond",
+  "3029": "Woodhurst",
+  "3030": "Mooiriver",
+  "3031": "Ladysmith",
+  "3032": "Newcastle",
+  "3033": "Moorton",
+  "3034": "Tongaat Rank",
+  "3035": "Ixopo",
+  "3036": "Umlazi V",
+  "3037": "Dundee",
+  "3039": "Vryheid",
+  "3040": "Estcourt",
+  "3041": "Harding",
+  "3042": "Umlazi D",
+  "3043": "Truro Plaza",
+  "3044": "Osizweni",
+  "3045": "Paulpietersburg",
+  "3046": "Mthatha",
+  "3047": "Kingsburgh",
+  "3048": "North Coast Road",
+  "3049": "Highflats",
+  "3009": "Folweni"
+};
+
 const supabase = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
   ? createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
   : null;
@@ -798,7 +859,7 @@ function getNextQuestion(session) {
   // --- PHASE 1: IDENTIFICATION ---
   if (state.phase === PHASES.IDENTIFICATION) {
     switch (state.step) {
-      case 'STORE': return "Please provide the store or branch name you are reporting from.";
+      case 'STORE': return "Please provide your 4-digit Store Code (e.g. 1002).";
       case 'REPORTER': return "What is your full name?";
       case 'CATEGORY':
         let catList = "Please select the equipment category:\n";
@@ -926,7 +987,15 @@ function handleInput(session, input) {
 
   // --- PHASE 1: IDENTIFICATION ---
   if (state.phase === PHASES.IDENTIFICATION) {
-    if (state.step === 'STORE') { data.store = text; state.step = 'REPORTER'; }
+    if (state.step === 'STORE') {
+      const storeName = STORES[text];
+      if (storeName) {
+        data.store = `${text} Checksave ${storeName}`;
+        state.step = 'REPORTER';
+      } else {
+        return "Invalid store code. Please retry with a valid 4-digit Checksave store code.";
+      }
+    }
     else if (state.step === 'REPORTER') { data.reporter = text; state.step = 'CATEGORY'; }
     else if (state.step === 'CATEGORY') {
       const cats = Object.keys(CATEGORY_EQUIPMENT);
