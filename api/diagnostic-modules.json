@@ -1,0 +1,117 @@
+{
+  "refrig_upright": [
+    { "id": "R_TEMP",    "text": "What is the current temperature reading on the display?", "type": "number" },
+    { "id": "R_ALARM",   "text": "Is there an active alarm or warning on the unit?", "type": "options", "options": ["Yes","No"] },
+    { "id": "R_VENT",    "text": "Is there airflow blowing from the vents at eye level?", "type": "options", "options": ["Yes","No"] },
+    { "id": "R_BASEFAN", "text": "How many base fans underneath the unit are spinning?", "type": "options", "options": ["All spinning","Some spinning — enter count","None spinning"] },
+    { "id": "R_WATER",   "text": "Is there stagnant water visible near the base fans?", "type": "options", "options": ["Yes","No"] },
+    { "id": "R_DAMAGE",  "text": "Is there visible damage at the base — broken fan or burnt motor smell?", "type": "options", "options": ["Yes — describe","No"] },
+    { "id": "R_DOORSEAL","text": "Are the door seals closing and sealing correctly?", "type": "options", "options": ["Yes","No — damaged","No — not closing fully"] }
+  ],
+  "refrig_coldroom": [
+    { "id": "C_TEMP",    "text": "What is the current temperature reading on the display?", "type": "number" },
+    { "id": "C_ALARM",   "text": "Is there an active alarm or warning on the unit?", "type": "options", "options": ["Yes","No"] },
+    { "id": "C_FANS",    "text": "Are the blower fans inside the cold room spinning?", "type": "options", "options": ["All spinning","Some spinning","None spinning"] },
+    { "id": "C_ICE",     "text": "Is there ice build-up on the blower unit?", "type": "options", "options": ["Yes — front","Yes — back","Yes — both","No"] },
+    { "id": "C_DOOR",    "text": "Are the cold room door seals intact and closing properly?", "type": "options", "options": ["Yes","No — damaged","No — not closing"] },
+    { "id": "C_COMP",    "text": "Is the compressor fan spinning on the exterior unit?", "type": "options", "options": ["Yes","No","Not visible"] }
+  ],
+  "refrig_freezer": [
+    { "id": "F_TEMP",    "text": "What is the current temperature reading on the display?", "type": "number" },
+    { "id": "F_ALARM",   "text": "Is there an active alarm or warning on the unit?", "type": "options", "options": ["Yes","No"] },
+    { "id": "F_FANS",    "text": "Are the blower fans inside the freezer room spinning?", "type": "options", "options": ["All spinning","Some spinning","None spinning"] },
+    { "id": "F_ICE",     "text": "Is there ice build-up on the blower unit?", "type": "options", "options": ["Yes — front","Yes — back","Yes — both","No"] },
+    { "id": "F_COMP",    "text": "Is the compressor fan spinning on the exterior unit?", "type": "options", "options": ["Yes","No","Not visible"] }
+  ],
+  "refrig_island": [
+    { "id": "I_TEMP",    "text": "What is the current temperature reading on the display?", "type": "number" },
+    { "id": "I_ALARM",   "text": "Is there an active alarm or warning on the unit?", "type": "options", "options": ["Yes","No"] },
+    { "id": "I_FANS",    "text": "Are the interior fans inside the island unit spinning?", "type": "options", "options": ["All spinning","Some spinning","None spinning"] },
+    { "id": "I_ICE",     "text": "Is there ice build-up on the interior evaporator?", "type": "options", "options": ["Yes","No"] },
+    { "id": "I_COMP",    "text": "Is the compressor fan spinning on the exterior or base unit?", "type": "options", "options": ["Yes","No","Not visible"] }
+  ],
+  "refrig_serveover": [
+    { "id": "S_TEMP",    "text": "What is the current temperature reading on the display?", "type": "number" },
+    { "id": "S_ALARM",   "text": "Is there an active alarm or warning on the unit?", "type": "options", "options": ["Yes","No"] },
+    { "id": "S_FANS",    "text": "Are the interior fans inside the serve-over spinning?", "type": "options", "options": ["All spinning","Some spinning","None spinning"] },
+    { "id": "S_ICE",     "text": "Is there ice build-up on any internal surface?", "type": "options", "options": ["Yes — describe location","No"] },
+    { "id": "S_COMP",    "text": "Is the compressor fan spinning on the exterior or base unit?", "type": "options", "options": ["Yes","No","Not visible"] }
+  ],
+  "electrical_lighting": [
+    { "id": "EL_AREA",   "text": "Which area or circuit is affected?", "type": "text" },
+    { "id": "EL_DAMAGE", "text": "Is there visible damage to fittings, wiring, or the light itself?", "type": "options", "options": ["Yes — describe","No"] },
+    { "id": "EL_FLICKER","text": "Are the lights flickering or intermittently cutting out?", "type": "options", "options": ["Yes","No"] }
+  ],
+  "electrical_sockets": [
+    { "id": "ES_AREA",   "text": "Which socket or area is affected?", "type": "text" },
+    { "id": "ES_DAMAGE", "text": "Is there visible damage to the socket — burn marks, cracks, or exposed parts?", "type": "options", "options": ["Yes — describe","No"] },
+    { "id": "ES_SPARK",  "text": "Is the socket sparking?", "type": "options", "options": ["Yes","No"] }
+  ],
+  "electrical_db": [
+    { "id": "ED_TRIPPED","text": "Is a breaker at the DB board tripped or off?", "type": "options", "options": ["Yes","No","Multiple breakers tripped"] },
+    { "id": "ED_CIRCUIT","text": "Which circuit or label is the tripped breaker for?", "type": "text" },
+    { "id": "ED_DAMAGE", "text": "Is there visible damage inside the DB board?", "type": "options", "options": ["Yes","No"] }
+  ],
+  "backup_generator": [
+    { "id": "G_START",   "text": "Is the generator starting and running?", "type": "options", "options": ["Yes — running normally","No — will not start","Starts then shuts down"] },
+    { "id": "G_FUEL",    "text": "What is the current fuel level?", "type": "options", "options": ["Full","Three quarter","Half","Low","Empty — refuel immediately"] },
+    { "id": "G_BATTERY", "text": "Is the battery charged and all connections secure?", "type": "options", "options": ["Yes","No","Unknown"] },
+    { "id": "G_ERRORS",  "text": "Are there error codes or warning lights on the display?", "type": "options", "options": ["Yes — describe code","No"] }
+  ],
+  "backup_ups": [
+    { "id": "U_STATUS",  "text": "What is the UPS status indicator showing?", "type": "options", "options": ["Normal — green","Warning — amber","Fault — red","No display"] },
+    { "id": "U_BATTERY", "text": "Is the battery charged and healthy?", "type": "options", "options": ["Yes","No — low","Unknown"] },
+    { "id": "U_OUTPUT",  "text": "Is the UPS providing stable output power?", "type": "options", "options": ["Yes","No — dropping","Not powering equipment"] }
+  ],
+  "plumbing_general": [
+    { "id": "P_TYPE",    "text": "What is the plumbing fault?", "type": "options", "options": ["Burst pipe","Active leak","Blocked drain","Geyser fault","Other"] },
+    { "id": "P_ACTIVE",  "text": "Is there active water flow causing immediate damage?", "type": "options", "options": ["Yes — isolated","Yes — NOT yet isolated","No"] },
+    { "id": "P_LOCATION","text": "What is the exact location of the fault?", "type": "text" }
+  ],
+  "building_general": [
+    { "id": "BC_TYPE",   "text": "What type of defect is this?", "type": "options", "options": ["Roof leak","Floor/Tiling","Door/Lock","Signage","Other"] },
+    { "id": "BC_SAFETY", "text": "Is this defect a safety risk to staff or customers?", "type": "options", "options": ["Yes","No"] },
+    { "id": "BC_EXTENT", "text": "How extensive is the damage?", "type": "options", "options": ["Minor","Moderate","Significant","Severe"] }
+  ],
+  "trolley": [
+    { "id": "T_FAULT",   "text": "What is the primary fault?", "type": "options", "options": ["Wheels not rolling","Wheel missing","Handle broken","Structural damage"] },
+    { "id": "T_COUNT",   "text": "How many units are affected?", "type": "options", "options": ["1","2 to 5","More than 5"] }
+  ],
+  "bakery": [
+    { "id": "B_MOVING",  "text": "Are the moving parts of the equipment operating?", "type": "options", "options": ["Yes","No"] },
+    { "id": "B_OVENTEMP","text": "Is the oven reaching and holding set temperature?", "type": "options", "options": ["Yes","No","Not applicable"] },
+    { "id": "B_HEATING", "text": "Is the heating element or burner active?", "type": "options", "options": ["Yes","No"] }
+  ],
+  "butchery": [
+    { "id": "BU_GUARDS", "text": "Are all safety covers and blade guards in place?", "type": "options", "options": ["Yes","No"] },
+    { "id": "BU_BLADES", "text": "Are the blades or cutting mechanisms moving?", "type": "options", "options": ["Yes","No"] },
+    { "id": "BU_VACUUM", "text": "Is the vacuum sealing and suction functioning?", "type": "options", "options": ["Yes","No","Not applicable"] }
+  ],
+  "deli": [
+    { "id": "D_HEATING", "text": "Is the heating element or burner active?", "type": "options", "options": ["Yes","No"] },
+    { "id": "D_TEMP",    "text": "Is the temperature stable and reaching set point?", "type": "options", "options": ["Yes","No","Fluctuating"] },
+    { "id": "D_GAS",     "text": "Is gas ignition working?", "type": "options", "options": ["Yes","No","Electric unit"] }
+  ],
+  "fv": [
+    { "id": "FV_DISPLAY","text": "Are display lights and controls activating?", "type": "options", "options": ["Yes","No"] },
+    { "id": "FV_TEFLON", "text": "Is the Teflon strip undamaged?", "type": "options", "options": ["Yes","No — burnt","No — missing"] },
+    { "id": "FV_WIRE",   "text": "Is the heating wire exposed?", "type": "options", "options": ["No — safe","Yes — EMERGENCY STOP"] }
+  ],
+  "hvac": [
+    { "id": "H_AIRFLOW", "text": "Is the unit producing airflow?", "type": "options", "options": ["Yes","No"] },
+    { "id": "H_TEMP",    "text": "Is the air reaching the set temperature?", "type": "options", "options": ["Yes","No","Partially"] },
+    { "id": "H_DRIP",    "text": "Is there water dripping or leaking?", "type": "options", "options": ["Yes","No"] }
+  ],
+  "fire": [
+    { "id": "FS_TYPE",   "text": "What is the fire safety fault?", "type": "options", "options": ["Expired","Missing","Fault","Blocked"] },
+    { "id": "FS_ACTIVE", "text": "Is there an active fire or immediate emergency?", "type": "options", "options": ["Yes","No"] },
+    { "id": "FS_TAGOUT", "text": "Is the asset tagged and out of service?", "type": "options", "options": ["Yes","No"] }
+  ],
+  "pest": [
+    { "id": "PEST_TYPE", "text": "What is the issue?", "type": "options", "options": ["Rodent sighting", "Insect activity", "Sanitizer station empty", "Other"] },
+    { "id": "PEST_AREA", "text": "Is this in a food-prep area?", "type": "options", "options": ["Yes","No"] }
+  ],
+  "general": [
+    { "id": "GEN_DESC",  "text": "Please describe the fault in detail.", "type": "text" }
+  ]
+}
