@@ -20,16 +20,6 @@
     "OPERATIONAL": "What is the operational impact?",
     "OPTIONS": ["No Impact", "Minor Impact", "Department Impact", "Multiple Departments Impacted", "Store Wide Impact", "Trading Stopped"]
   },
-  "universal_engine": [
-    { "id": "MECH_POWER_LIGHT", "text": "Is the unit's power light on? (Yes / No / N/A)" },
-    { "id": "MECH_DISPLAY_ERR", "text": "Is there an error code on the display? (Yes - provide code / No / N/A)" },
-    { "id": "MECH_NOISE",       "text": "Is there any unusual noise? (Yes / No)" },
-    { "id": "MECH_JAM",         "text": "Is there a jam or blockage? (Yes / No)" },
-    { "id": "MECH_LEAK",        "text": "Is there a visible leak? (Yes / No)" },
-    { "id": "MECH_VIB",         "text": "Is there excess vibration? (Yes / No)" },
-    { "id": "MECH_BURN",        "text": "Is there a burning smell? (Yes / No)" },
-    { "id": "MECH_DMG",         "text": "Is there visible damage or broken parts? (Yes / No)" }
-  ],
   "media": {
     "PHOTO": "Can you take a photo/video? Send it via WhatsApp if possible. (Yes - sending / No)"
   }
