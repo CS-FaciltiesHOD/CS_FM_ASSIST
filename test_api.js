@@ -1,8 +1,8 @@
 const { getLogicResponse } = require('./api/logic-engine');
 const session = { history: [], state: null, data: {} };
-getLogicResponse('test-user', 'hello', session).then(reply => {
+getLogicResponse('test-user', 'log a fault', session).then(reply => {
     console.log('API Reply:', reply);
-    if (reply.includes('FM Assist')) {
+    if (reply.includes('FM Assist V3')) {
         console.log('SUCCESS: Logic engine returned valid response.');
     } else {
         console.log('FAILURE: Unexpected response.');
