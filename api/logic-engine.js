@@ -69,9 +69,12 @@ function getNextQuestion(session) {
 
   // --- PHASE 4: ELECTRICAL (Conditional) ---
   if (state.phase === PHASES.ELECTRICAL) {
+    const pPath = meta.powerPath;
     if (state.step === 'START') {
       if (data.equipment === 'Lighting') return LIBRARY.electrical.LIGHTING_AREA.text + "\n1. Single Light\n2. Multiple Lights\n3. Entire Area";
       if (data.category === 'Refrigeration') return LIBRARY.electrical.REFRIG_CONTROLLER.text + "\n1. Yes\n2. No";
+      if (pPath === 'plug' || pPath === 'move_socket') return "Is the appliance plugged in and the socket switched ON?\n1. Yes\n2. No";
+      if (pPath === 'isolator') return "Is the equipment isolator switch in the ON position?\n1. Yes\n2. No";
       return "Is there power to the unit?\n1. Yes\n2. No";
     }
     if (state.step === 'BREAKER_TRIP') return LIBRARY.electrical.BREAKER_TRIPPED.text + "\n1. Yes\n2. No\n3. Unknown";
@@ -231,20 +234,22 @@ function handleInput(session, input) {
         if (data.elecArea === 'Single Light') state.step = 'LAMP_DMG';
         else state.step = 'BREAKER_TRIP';
       } else {
-        const hasPower = lowText.includes('yes') || text === '1';
-        if (hasPower) { data.powerStatus = 'Confirmed'; state.phase = PHASES.SYMPTOMS; }
-        else {
-          data.powerStatus = 'No Power';
-          if (path === 'db_board') state.step = 'BREAKER_TRIP';
-          else if (path === 'plug') state.step = 'SOCKET_TEST';
-          else state.phase = PHASES.SYMPTOMS;
+        const isSwitchOn = lowText.includes('yes') || text === '1';
+        if (isSwitchOn) {
+            // Power is switched on, but is it actually working?
+            if (path === 'plug' || path === 'move_socket') state.step = 'SOCKET_TEST';
+            else if (path === 'isolator') state.step = 'BREAKER_TRIP';
+            else { data.powerStatus = 'Switched ON'; state.phase = PHASES.SYMPTOMS; }
+        } else {
+            data.powerStatus = 'Switched OFF';
+            return "Please switch the power ON and let me know if the unit starts.";
         }
       }
     }
     else if (state.step === 'BREAKER_TRIP') {
       const tripped = lowText.includes('yes') || text === '1';
       if (tripped) state.step = 'BREAKER_RESET';
-      else { data.powerStatus = 'Electrical fault escalated'; state.phase = PHASES.SYMPTOMS; }
+      else { data.powerStatus = 'Supply Fault (Breaker OK)'; state.phase = PHASES.SYMPTOMS; }
     }
     else if (state.step === 'BREAKER_RESET') {
       const restored = lowText.includes('yes') || text === '1';
@@ -255,8 +260,17 @@ function handleInput(session, input) {
       data.socketTest = text;
       if (lowText.includes('works') || text === '1') {
           data.powerStatus = 'Socket Verified - Appliance Fault Likely';
+          state.phase = PHASES.SYMPTOMS;
+      } else if (text === '2') {
+          data.powerStatus = 'Defective Socket';
+          // Follow socket path: jump to dedicated socket module diagnostic phase
+          data.category = 'Electrical';
+          data.equipment = 'Plug Points / Sockets';
+          data.equipmentProfile = EQUIPMENT_METADATA['Electrical']['Plug Points / Sockets'];
+          state.phase = PHASES.SYMPTOMS; // Will load socket symptoms next
+      } else {
+          state.phase = PHASES.SYMPTOMS;
       }
-      state.phase = PHASES.SYMPTOMS;
     }
     else if (state.step === 'LAMP_DMG') {
       data.lampDmg = text;

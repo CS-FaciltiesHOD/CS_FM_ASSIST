@@ -16,61 +16,61 @@
     "UPS": { "powered": true, "assetTracked": true, "foodSafety": false, "criticality": "Critical", "provider": "Generator Contractor", "module": "backup_ups", "powerPath": "ups" }
   },
   "Plumbing": {
-    "Burst Pipe": { "powered": false, "assetTracked": false, "foodSafety": false, "criticality": "Critical", "provider": "Plumbing Services", "module": "plumbing_general", "powerPath": "none" },
-    "Blocked Drain": { "powered": false, "assetTracked": false, "foodSafety": false, "criticality": "Important", "provider": "Plumbing Services", "module": "plumbing_general", "powerPath": "none" },
-    "Geyser / Water Heater": { "powered": true, "assetTracked": true, "foodSafety": false, "criticality": "Important", "provider": "Plumbing Services", "module": "plumbing_general", "powerPath": "plug" },
-    "General Plumbing": { "powered": false, "assetTracked": false, "foodSafety": false, "criticality": "Routine", "provider": "Plumbing Services", "module": "plumbing_general", "powerPath": "none" }
+    "Burst Pipe": { "powered": false, "assetTracked": false, "foodSafety": false, "criticality": "Critical", "provider": "Plumbing Services", "module": "plumbing_burst", "powerPath": "none" },
+    "Blocked Drain": { "powered": false, "assetTracked": false, "foodSafety": false, "criticality": "Important", "provider": "Plumbing Services", "module": "plumbing_blocked", "powerPath": "none" },
+    "Geyser / Water Heater": { "powered": true, "assetTracked": true, "foodSafety": false, "criticality": "Important", "provider": "Plumbing Services", "module": "plumbing_geyser", "powerPath": "plug" },
+    "General Plumbing": { "powered": false, "assetTracked": false, "foodSafety": false, "criticality": "Routine", "provider": "Plumbing Services", "module": "plumbing_burst", "powerPath": "none" }
   },
   "Building & Civil": {
-    "Roof Leak": { "powered": false, "assetTracked": false, "foodSafety": false, "criticality": "Important", "provider": "Building Maintenance", "module": "building_general", "powerPath": "none" },
-    "Floor / Tiling": { "powered": false, "assetTracked": false, "foodSafety": false, "criticality": "Routine", "provider": "Building Maintenance", "module": "building_general", "powerPath": "none" },
-    "Door / Lock": { "powered": false, "assetTracked": false, "foodSafety": false, "criticality": "Important", "provider": "Building Maintenance", "module": "building_general", "powerPath": "none" },
-    "General Building": { "powered": false, "assetTracked": false, "foodSafety": false, "criticality": "Routine", "provider": "Building Maintenance", "module": "building_general", "powerPath": "none" }
+    "Roof Leak": { "powered": false, "assetTracked": false, "foodSafety": false, "criticality": "Important", "provider": "Building Maintenance", "module": "general", "powerPath": "none" },
+    "Floor / Tiling": { "powered": false, "assetTracked": false, "foodSafety": false, "criticality": "Routine", "provider": "Building Maintenance", "module": "general", "powerPath": "none" },
+    "Door / Lock": { "powered": false, "assetTracked": false, "foodSafety": false, "criticality": "Important", "provider": "Building Maintenance", "module": "general", "powerPath": "none" },
+    "General Building": { "powered": false, "assetTracked": false, "foodSafety": false, "criticality": "Routine", "provider": "Building Maintenance", "module": "general", "powerPath": "none" }
   },
   "Trolleys": {
     "Customer Trolley": { "powered": false, "assetTracked": false, "foodSafety": false, "criticality": "Routine", "provider": "Workshop Team", "module": "trolley", "powerPath": "none" },
     "Basket / Pallet Jack / Flatbed": { "powered": false, "assetTracked": false, "foodSafety": false, "criticality": "Routine", "provider": "Workshop Team", "module": "trolley", "powerPath": "none" }
   },
   "Bakery": {
-    "Bakery Oven": { "powered": true, "assetTracked": true, "foodSafety": true, "criticality": "Important", "provider": "Bakery Services", "module": "bakery", "powerPath": "plug" },
-    "Dough Divider": { "powered": true, "assetTracked": true, "foodSafety": true, "criticality": "Important", "provider": "Bakery Services", "module": "bakery", "powerPath": "plug" },
-    "Dough Mixer": { "powered": true, "assetTracked": true, "foodSafety": true, "criticality": "Important", "provider": "Bakery Services", "module": "bakery", "powerPath": "plug" },
-    "General Bakery Equipment": { "powered": true, "assetTracked": true, "foodSafety": true, "criticality": "Important", "provider": "Bakery Services", "module": "bakery", "powerPath": "plug" }
+    "Bakery Oven": { "powered": true, "assetTracked": true, "foodSafety": true, "criticality": "Important", "provider": "Bakery Services", "module": "bakery_oven", "powerPath": "plug" },
+    "Dough Divider": { "powered": true, "assetTracked": true, "foodSafety": true, "criticality": "Important", "provider": "Bakery Services", "module": "bakery_divider", "powerPath": "plug" },
+    "Dough Mixer": { "powered": true, "assetTracked": true, "foodSafety": true, "criticality": "Important", "provider": "Bakery Services", "module": "bakery_mixer", "powerPath": "plug" },
+    "General Bakery Equipment": { "powered": true, "assetTracked": true, "foodSafety": true, "criticality": "Important", "provider": "Bakery Services", "module": "bakery_oven", "powerPath": "plug" }
   },
   "Butchery": {
-    "Bandsaw": { "powered": true, "assetTracked": true, "foodSafety": true, "criticality": "Important", "provider": "Butchery Technician", "module": "butchery", "powerPath": "plug" },
-    "Mincer": { "powered": true, "assetTracked": true, "foodSafety": true, "criticality": "Important", "provider": "Butchery Technician", "module": "butchery", "powerPath": "plug" },
-    "Vacuum Machine": { "powered": true, "assetTracked": true, "foodSafety": true, "criticality": "Important", "provider": "Butchery Technician", "module": "butchery", "powerPath": "plug" },
-    "Slicer": { "powered": true, "assetTracked": true, "foodSafety": true, "criticality": "Important", "provider": "Butchery Technician", "module": "butchery", "powerPath": "plug" },
-    "General Butchery Equipment": { "powered": true, "assetTracked": true, "foodSafety": true, "criticality": "Important", "provider": "Butchery Technician", "module": "butchery", "powerPath": "plug" }
+    "Bandsaw": { "powered": true, "assetTracked": true, "foodSafety": true, "criticality": "Important", "provider": "Butchery Technician", "module": "butchery_bandsaw", "powerPath": "plug" },
+    "Mincer": { "powered": true, "assetTracked": true, "foodSafety": true, "criticality": "Important", "provider": "Butchery Technician", "module": "butchery_mincer", "powerPath": "plug" },
+    "Vacuum Machine": { "powered": true, "assetTracked": true, "foodSafety": true, "criticality": "Important", "provider": "Butchery Technician", "module": "butchery_vacuum", "powerPath": "plug" },
+    "Slicer": { "powered": true, "assetTracked": true, "foodSafety": true, "criticality": "Important", "provider": "Butchery Technician", "module": "butchery_slicer", "powerPath": "plug" },
+    "General Butchery Equipment": { "powered": true, "assetTracked": true, "foodSafety": true, "criticality": "Important", "provider": "Butchery Technician", "module": "butchery_bandsaw", "powerPath": "plug" }
   },
   "Deli": {
-    "Fryer": { "powered": true, "assetTracked": true, "foodSafety": true, "criticality": "Important", "provider": "Deli Services", "module": "deli", "powerPath": "plug" },
-    "Grill": { "powered": true, "assetTracked": true, "foodSafety": true, "criticality": "Important", "provider": "Deli Services", "module": "deli", "powerPath": "plug" },
-    "Bain Marie": { "powered": true, "assetTracked": true, "foodSafety": true, "criticality": "Important", "provider": "Deli Services", "module": "deli", "powerPath": "plug" },
-    "Combi Oven": { "powered": true, "assetTracked": true, "foodSafety": true, "criticality": "Important", "provider": "Deli Services", "module": "deli", "powerPath": "plug" },
-    "General Deli Equipment": { "powered": true, "assetTracked": true, "foodSafety": true, "criticality": "Important", "provider": "Deli Services", "module": "deli", "powerPath": "plug" }
+    "Fryer": { "powered": true, "assetTracked": true, "foodSafety": true, "criticality": "Important", "provider": "Deli Services", "module": "deli_fryer", "powerPath": "plug" },
+    "Grill": { "powered": true, "assetTracked": true, "foodSafety": true, "criticality": "Important", "provider": "Deli Services", "module": "deli_grill", "powerPath": "plug" },
+    "Bain Marie": { "powered": true, "assetTracked": true, "foodSafety": true, "criticality": "Important", "provider": "Deli Services", "module": "deli_bainmarie", "powerPath": "plug" },
+    "Combi Oven": { "powered": true, "assetTracked": true, "foodSafety": true, "criticality": "Important", "provider": "Deli Services", "module": "deli_combi", "powerPath": "plug" },
+    "General Deli Equipment": { "powered": true, "assetTracked": true, "foodSafety": true, "criticality": "Important", "provider": "Deli Services", "module": "deli_fryer", "powerPath": "plug" }
   },
   "Fruit & Veg": {
-    "Sealer": { "powered": true, "assetTracked": true, "foodSafety": true, "criticality": "Important", "provider": "F&V Team", "module": "fv", "powerPath": "plug" },
-    "Wrapper": { "powered": true, "assetTracked": true, "foodSafety": true, "criticality": "Important", "provider": "F&V Team", "module": "fv", "powerPath": "plug" }
+    "Sealer": { "powered": true, "assetTracked": true, "foodSafety": true, "criticality": "Important", "provider": "F&V Team", "module": "fv_sealer", "powerPath": "plug" },
+    "Wrapper": { "powered": true, "assetTracked": true, "foodSafety": true, "criticality": "Important", "provider": "F&V Team", "module": "fv_wrapper", "powerPath": "plug" }
   },
   "HVAC": {
-    "Aircon Unit": { "powered": true, "assetTracked": true, "foodSafety": false, "criticality": "Important", "provider": "HVAC Contractor", "module": "hvac", "powerPath": "plug" },
-    "General HVAC": { "powered": true, "assetTracked": true, "foodSafety": false, "criticality": "Important", "provider": "HVAC Contractor", "module": "hvac", "powerPath": "plug" }
+    "Aircon Unit": { "powered": true, "assetTracked": true, "foodSafety": false, "criticality": "Important", "provider": "HVAC Contractor", "module": "hvac_aircon", "powerPath": "plug" },
+    "General HVAC": { "powered": true, "assetTracked": true, "foodSafety": false, "criticality": "Important", "provider": "HVAC Contractor", "module": "hvac_aircon", "powerPath": "plug" }
   },
   "Fire Safety": {
-    "Fire Extinguisher": { "powered": false, "assetTracked": false, "foodSafety": false, "criticality": "Critical", "provider": "Fire Safety Services", "module": "fire", "powerPath": "none" },
-    "Smoke Detector": { "powered": true, "assetTracked": false, "foodSafety": false, "criticality": "Critical", "provider": "Fire Safety Services", "module": "fire", "powerPath": "none" },
-    "Fire Door": { "powered": false, "assetTracked": false, "foodSafety": false, "criticality": "Critical", "provider": "Fire Safety Services", "module": "fire", "powerPath": "none" },
-    "Hose Reel": { "powered": false, "assetTracked": false, "foodSafety": false, "criticality": "Critical", "provider": "Fire Safety Services", "module": "fire", "powerPath": "none" },
-    "Fire Panel / Alarm": { "powered": true, "assetTracked": true, "foodSafety": false, "criticality": "Critical", "provider": "Fire Safety Services", "module": "fire", "powerPath": "none" }
+    "Fire Extinguisher": { "powered": false, "assetTracked": false, "foodSafety": false, "criticality": "Critical", "provider": "Fire Safety Services", "module": "fire_extinguisher", "powerPath": "none" },
+    "Smoke Detector": { "powered": true, "assetTracked": false, "foodSafety": false, "criticality": "Critical", "provider": "Fire Safety Services", "module": "fire_smoke", "powerPath": "none" },
+    "Fire Door": { "powered": false, "assetTracked": false, "foodSafety": false, "criticality": "Critical", "provider": "Fire Safety Services", "module": "general", "powerPath": "none" },
+    "Hose Reel": { "powered": false, "assetTracked": false, "foodSafety": false, "criticality": "Critical", "provider": "Fire Safety Services", "module": "general", "powerPath": "none" },
+    "Fire Panel / Alarm": { "powered": true, "assetTracked": true, "foodSafety": false, "criticality": "Critical", "provider": "Fire Safety Services", "module": "fire_panel", "powerPath": "none" }
   },
   "Pest & Hygiene": {
-    "Rodent Activity": { "powered": false, "assetTracked": false, "foodSafety": true, "criticality": "Important", "provider": "Pest Control Contractor", "module": "pest", "powerPath": "none" },
-    "Insect Infestation": { "powered": false, "assetTracked": false, "foodSafety": true, "criticality": "Important", "provider": "Pest Control Contractor", "module": "pest", "powerPath": "none" },
-    "Hygiene Station": { "powered": false, "assetTracked": false, "foodSafety": true, "criticality": "Important", "provider": "Hygiene Services", "module": "pest", "powerPath": "none" },
-    "General Pest": { "powered": false, "assetTracked": false, "foodSafety": true, "criticality": "Important", "provider": "Pest Control Contractor", "module": "pest", "powerPath": "none" }
+    "Rodent Activity": { "powered": false, "assetTracked": false, "foodSafety": true, "criticality": "Important", "provider": "Pest Control Contractor", "module": "pest_rodent", "powerPath": "none" },
+    "Insect Infestation": { "powered": false, "assetTracked": false, "foodSafety": true, "criticality": "Important", "provider": "Pest Control Contractor", "module": "pest_insect", "powerPath": "none" },
+    "Hygiene Station": { "powered": false, "assetTracked": false, "foodSafety": true, "criticality": "Important", "provider": "Hygiene Services", "module": "hygiene_station", "powerPath": "none" },
+    "General Pest": { "powered": false, "assetTracked": false, "foodSafety": true, "criticality": "Important", "provider": "Pest Control Contractor", "module": "pest_rodent", "powerPath": "none" }
   },
   "General": {
     "General Equipment / Other": { "powered": true, "assetTracked": true, "foodSafety": true, "criticality": "Routine", "provider": "FM Manager", "module": "general", "powerPath": "none" }
