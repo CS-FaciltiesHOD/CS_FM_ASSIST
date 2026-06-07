@@ -1,79 +1,645 @@
 {
   "refrig_upright": {
     "symptoms": [
-      { "id": "S1", "text": "Not Cooling" },
-      { "id": "S2", "text": "High Temperature" },
-      { "id": "S3", "text": "Alarm Active" },
-      { "id": "S4", "text": "Water Leak" },
-      { "id": "S5", "text": "Fan Failure" },
-      { "id": "S6", "text": "Ice Build-Up" },
-      { "id": "S7", "text": "Unit Dead" },
-      { "id": "S8", "text": "Door Fault" }
+      { "id": "RS1", "text": "Not Cooling" },
+      { "id": "RS2", "text": "High Temperature" },
+      { "id": "RS3", "text": "Alarm Active" },
+      { "id": "RS4", "text": "Water Leak" },
+      { "id": "RS5", "text": "Ice Build-Up" },
+      { "id": "RS6", "text": "Unit Dead" },
+      { "id": "RS7", "text": "Fan Failure" },
+      { "id": "RS8", "text": "Door Fault" },
+      { "id": "RS9", "text": "Intermittent Operation" }
     ],
     "logic": [
-      { "id": "R_TEMP", "text": "What is the current temperature reading?", "type": "number" },
-      { "id": "R_CTRL", "text": "Is the controller display on and showing readings?", "options": ["Yes", "No", "Dim/Flickering"] },
-      { "id": "R_ALRM", "text": "Are there any active alarms (e.g. 'hi', 'lo', 'dor')?", "options": ["Yes", "No"] },
-      { "id": "R_COMP", "text": "Is the compressor running (audible hum)?", "options": ["Yes", "No", "Clicking"] },
-      { "id": "R_AIRF", "text": "Is there airflow blowing from the internal vents?", "options": ["Yes", "No"] },
-      { "id": "R_FANS", "text": "Are the evaporator fans spinning?", "options": ["Yes", "No"] },
-      { "id": "R_DFST", "text": "Is the unit currently in a defrost cycle?", "options": ["Yes", "No", "Not sure"] },
-      { "id": "R_DOOR", "text": "Are the door seals closing and sealing correctly?", "options": ["Yes", "No"] },
-      { "id": "R_COND", "text": "Is the condenser coil clean and free of dust?", "options": ["Yes", "No", "Blocked"] },
-      { "id": "R_LIQU", "text": "Is there any liquid or oil pooling at the base?", "options": ["Yes", "No"] },
-      { "id": "R_RISK", "text": "Is the product currently at risk of spoilage?", "options": ["Yes", "No"] }
+      { "id": "R_TEMP", "text": "Current displayed temperature?", "type": "number" },
+      { "id": "R_TIME", "text": "Time out of range?", "options": ["< 1 hour", "1-4 hours", "4-12 hours", "12+ hours"] },
+      { "id": "R_DISP", "text": "Display operating?", "options": ["Yes", "No", "Flickering"] },
+      { "id": "R_ALRM", "text": "Alarm active?", "options": ["Yes", "No"] },
+      { "id": "R_CODE", "text": "Alarm code (if any)?", "type": "text", "conditional": { "field": "R_ALRM", "value": "Yes" } },
+      { "id": "R_OFF", "text": "Recently switched off?", "options": ["Yes", "No"] },
+      { "id": "R_COMP", "text": "Compressor running?", "options": ["Yes", "No", "Intermittent"] },
+      { "id": "R_CSND", "text": "Compressor sound?", "options": ["Normal", "Loud/Rattling", "Clicking", "Silent"] },
+      { "id": "R_CFAN", "text": "Condenser fan running?", "options": ["Yes", "No"] },
+      { "id": "R_CDRT", "text": "Condenser dirty?", "options": ["Yes", "No"] },
+      { "id": "R_CBLK", "text": "Condenser blocked?", "options": ["Yes", "No"] },
+      { "id": "R_AIRF", "text": "Airflow present?", "options": ["Yes", "No"] },
+      { "id": "R_EFAN", "text": "Evaporator fans running?", "options": ["All", "Some", "None"] },
+      { "id": "R_FNUM", "text": "Number running?", "type": "number", "conditional": { "field": "R_EFAN", "value": "Some" } },
+      { "id": "R_INST", "text": "Number installed?", "type": "number" },
+      { "id": "R_ICE", "text": "Ice present?", "options": ["Yes", "No"] },
+      { "id": "R_ILOC", "text": "Ice location?", "options": ["Coils", "Floor", "Vents", "Back Panel"], "conditional": { "field": "R_ICE", "value": "Yes" } },
+      { "id": "R_ISEV", "text": "Ice severity?", "options": ["Light Frost", "Heavy Ice", "Solid Block"], "conditional": { "field": "R_ICE", "value": "Yes" } },
+      { "id": "R_DCLS", "text": "Door closing correctly?", "options": ["Yes", "No"] },
+      { "id": "R_SEAL", "text": "Door seal condition?", "options": ["Good", "Torn/Loose", "Brittle"] },
+      { "id": "R_DOPN", "text": "Door left open?", "options": ["Yes", "No"] },
+      { "id": "R_WATR", "text": "Water present?", "options": ["Yes", "No"] },
+      { "id": "R_WLOC", "text": "Internal or external?", "options": ["Internal", "External", "Both"], "conditional": { "field": "R_WATR", "value": "Yes" } },
+      { "id": "R_DRAN", "text": "Drain blocked?", "options": ["Yes", "No", "Unsure"], "conditional": { "field": "R_WATR", "value": "Yes" } }
     ],
     "resolutions": [
-      {
-        "cause": "Evaporator Fan Failure",
-        "condition": { "R_AIRF": "No", "R_FANS": "No", "R_COMP": "Yes" },
-        "score": 90,
-        "recommendation": "Check fan motor power and blade obstruction."
-      },
-      {
-        "cause": "Dirty Condenser / High Pressure",
-        "condition": { "R_TEMP": ">5", "R_COND": "No" },
-        "score": 85,
-        "recommendation": "Clean condenser coils and check for high-pressure trip."
-      },
-      {
-        "cause": "Controller / Power Fault",
-        "condition": { "R_CTRL": "No" },
-        "score": 95,
-        "recommendation": "Check controller power supply and transformer."
-      }
+      { "cause": "Evaporator Fan Failure", "condition": { "R_EFAN": "None" }, "score": 90, "recommendation": "Technician to replace evaporator fan motor." },
+      { "cause": "Dirty Condenser", "condition": { "R_CDRT": "Yes" }, "score": 85, "recommendation": "Store to clean condenser coils immediately." },
+      { "cause": "Condenser Fan Failure", "condition": { "R_CFAN": "No" }, "score": 80, "recommendation": "Technician to inspect condenser fan motor." },
+      { "cause": "Defrost Failure", "condition": { "R_ISEV": "Solid Block" }, "score": 85, "recommendation": "Manual defrost required; technician to check heater/timer." },
+      { "cause": "Door Seal Failure", "condition": { "R_SEAL": "Torn/Loose" }, "score": 75, "recommendation": "Replace door gaskets." },
+      { "cause": "Controller Failure", "condition": { "R_DISP": "No" }, "score": 95, "recommendation": "Technician to check controller power/replace unit." }
     ]
   },
+  "refrig_coldroom": { "copy": "refrig_upright" },
+  "refrig_freezer": { "copy": "refrig_upright" },
+  "refrig_island": { "copy": "refrig_upright" },
+  "refrig_serveover": { "copy": "refrig_upright" },
+
   "electrical_lighting": {
     "symptoms": [
-      { "id": "L1", "text": "Not working" },
-      { "id": "L2", "text": "Flickering" },
-      { "id": "L3", "text": "Dim" },
-      { "id": "L4", "text": "Physical damage" }
+      { "id": "LS1", "text": "No Lights" },
+      { "id": "LS2", "text": "Flickering" },
+      { "id": "LS3", "text": "Dim" },
+      { "id": "LS4", "text": "Intermittent" },
+      { "id": "LS5", "text": "Physical Damage" }
     ],
     "logic": [
-      { "id": "L_LOCA", "text": "Where exactly is the fault located?", "type": "text" },
-      { "id": "L_TYPE", "text": "What is the fault type?", "options": ["Not working", "Flickering", "Dim", "Physical damage", "Other"] },
-      { "id": "L_CNTS", "text": "How many fittings are affected?", "options": ["Single fitting", "Multiple fittings", "Entire area"] },
-      { "id": "L_BRKR", "text": "Is the circuit breaker tripped?", "options": ["Yes", "No", "Unknown"] },
-      { "id": "L_RSET", "text": "Reset the breaker. Is power restored?", "options": ["Yes", "No"], "conditional": { "field": "L_BRKR", "value": "Yes" } },
-      { "id": "L_VDMG", "text": "Is there visible damage to fittings or lamp holders?", "options": ["Yes", "No"] },
-      { "id": "L_WATE", "text": "Is there water ingress into the fitting?", "options": ["Yes", "No"] },
-      { "id": "L_EMRG", "text": "Is there sparking, overheating or a burning smell?", "options": ["Yes", "No"], "emergencyOn": ["Yes"] }
+      { "id": "L_AREA", "text": "Area affected?", "type": "text" },
+      { "id": "L_FIT", "text": "Single fitting or multiple fittings?", "options": ["Single fitting", "Multiple fittings"] },
+      { "id": "L_AISL", "text": "Entire aisle affected?", "options": ["Yes", "No"] },
+      { "id": "L_DEPT", "text": "Entire department affected?", "options": ["Yes", "No"] },
+      { "id": "L_BRKR", "text": "Breaker tripped?", "options": ["Yes", "No", "Unknown"] },
+      { "id": "L_BURN", "text": "Burn marks visible?", "options": ["Yes", "No"] },
+      { "id": "L_WIRE", "text": "Exposed wiring visible?", "options": ["Yes", "No"], "emergencyOn": ["Yes"] },
+      { "id": "L_WATR", "text": "Water ingress?", "options": ["Yes", "No"] },
+      { "id": "L_DMG", "text": "Fitting damaged?", "options": ["Yes", "No"] }
     ],
     "resolutions": [
-      {
-        "cause": "Lamp/Ballast Failure",
-        "condition": { "L_CNTS": "Single fitting" },
-        "score": 80,
-        "recommendation": "Replace lamp or ballast unit."
-      },
-      {
-        "cause": "Circuit Fault / Breaker Issue",
-        "condition": { "L_CNTS": "Entire area", "L_BRKR": "Yes" },
-        "score": 90,
-        "recommendation": "Investigate circuit overload or short circuit."
-      }
+      { "cause": "Lamp Failure", "condition": { "L_FIT": "Single fitting" }, "score": 70, "recommendation": "Replace lamp/tube." },
+      { "cause": "LED Driver Failure", "condition": { "L_FIT": "Single fitting", "LS2": "Flickering" }, "score": 80, "recommendation": "Replace LED driver." },
+      { "cause": "Breaker Failure", "condition": { "L_BRKR": "Yes" }, "score": 90, "recommendation": "Check for circuit overload or short circuit." },
+      { "cause": "Water Ingress", "condition": { "L_WATR": "Yes" }, "score": 95, "recommendation": "Isolate power and repair leak/seal fitting." }
     ]
+  },
+
+  "electrical_sockets": {
+    "symptoms": [
+      { "id": "SS1", "text": "No Power at Socket" },
+      { "id": "SS2", "text": "Sparking" },
+      { "id": "SS3", "text": "Loose/Cracked Socket" },
+      { "id": "SS4", "text": "Breaker Tripping" }
+    ],
+    "logic": [
+      { "id": "S_PLUG", "text": "Appliance plugged in?", "options": ["Yes", "No"] },
+      { "id": "S_ELSE", "text": "Appliance works elsewhere?", "options": ["Yes", "No"] },
+      { "id": "S_ALT", "text": "Alternate appliance works here?", "options": ["Yes", "No"] },
+      { "id": "S_BURN", "text": "Burn marks?", "options": ["Yes", "No"] },
+      { "id": "S_LOOS", "text": "Loose socket?", "options": ["Yes", "No"] },
+      { "id": "S_CRCK", "text": "Cracked socket?", "options": ["Yes", "No"] },
+      { "id": "S_SPRK", "text": "Sparking?", "options": ["Yes", "No"], "emergencyOn": ["Yes"] },
+      { "id": "S_TRIP", "text": "Breaker tripping?", "options": ["Yes", "No"] }
+    ],
+    "resolutions": [
+      { "cause": "Socket Failure", "condition": { "S_ALT": "No", "S_LOOS": "Yes" }, "score": 90, "recommendation": "Replace electrical socket." },
+      { "cause": "Circuit Fault", "condition": { "S_TRIP": "Yes" }, "score": 85, "recommendation": "Technician to investigate circuit for shorts." },
+      { "cause": "Loose Wiring", "condition": { "S_BURN": "Yes" }, "score": 95, "recommendation": "URGENT: Isolate breaker and check connections." }
+    ]
+  },
+
+  "electrical_db": {
+    "symptoms": [
+      { "id": "DS1", "text": "Power Outage" },
+      { "id": "DS2", "text": "Burning Smell" },
+      { "id": "DS3", "text": "Tripping Breaker" }
+    ],
+    "logic": [
+      { "id": "DB_WHCH", "text": "Which breaker affected?", "type": "text" },
+      { "id": "DB_TRIP", "text": "Breaker tripped?", "options": ["Yes", "No"] },
+      { "id": "DB_RSET", "text": "Reset successful?", "options": ["Yes", "No"], "conditional": { "field": "DB_TRIP", "value": "Yes" } },
+      { "id": "DB_IMMD", "text": "Trips immediately?", "options": ["Yes", "No"], "conditional": { "field": "DB_RSET", "value": "No" } },
+      { "id": "DB_SMEL", "text": "Burning smell?", "options": ["Yes", "No"], "emergencyOn": ["Yes"] },
+      { "id": "DB_HEAT", "text": "Excessive heat?", "options": ["Yes", "No"] },
+      { "id": "DB_DMG", "text": "Visible damage?", "options": ["Yes", "No"] }
+    ],
+    "resolutions": [
+      { "cause": "Overload", "condition": { "DB_TRIP": "Yes", "DB_RSET": "Yes" }, "score": 70, "recommendation": "Reduce load on circuit." },
+      { "cause": "Short Circuit", "condition": { "DB_IMMD": "Yes" }, "score": 90, "recommendation": "Investigate connected equipment for shorts." },
+      { "cause": "Breaker Failure", "condition": { "DB_HEAT": "Yes" }, "score": 85, "recommendation": "Replace faulty circuit breaker." }
+    ]
+  },
+
+  "backup_generator": {
+    "symptoms": [
+      { "id": "GS1", "text": "Won't Start" },
+      { "id": "GS2", "text": "Starts then stops" },
+      { "id": "GS3", "text": "No Output Power" },
+      { "id": "GS4", "text": "Leak Detected" }
+    ],
+    "logic": [
+      { "id": "G_STRT", "text": "Starts?", "options": ["Yes", "No"] },
+      { "id": "G_CRNK", "text": "Cranks?", "options": ["Yes", "No"], "conditional": { "field": "G_STRT", "value": "No" } },
+      { "id": "G_FUEL", "text": "Fuel level?", "options": ["Full", "Half", "Low", "Empty"] },
+      { "id": "G_BATT", "text": "Battery voltage?", "type": "text" },
+      { "id": "G_CODE", "text": "Error code?", "type": "text" },
+      { "id": "G_VLTG", "text": "Output voltage?", "type": "text" },
+      { "id": "G_ATS", "text": "ATS switching?", "options": ["Yes", "No"] },
+      { "id": "G_OIL", "text": "Oil leak?", "options": ["Yes", "No"] },
+      { "id": "G_COOL", "text": "Coolant leak?", "options": ["Yes", "No"] },
+      { "id": "G_SRVC", "text": "Service overdue?", "options": ["Yes", "No"] }
+    ],
+    "resolutions": [
+      { "cause": "Flat Battery", "condition": { "G_CRNK": "No" }, "score": 90, "recommendation": "Check battery charger and replace battery if needed." },
+      { "cause": "Fuel Issue", "condition": { "G_FUEL": "Empty" }, "score": 95, "recommendation": "Refuel generator immediately." },
+      { "cause": "ATS Failure", "condition": { "G_ATS": "No" }, "score": 85, "recommendation": "Technician to check automatic transfer switch." }
+    ]
+  },
+
+  "backup_ups": {
+    "symptoms": [
+      { "id": "US1", "text": "UPS Offline" },
+      { "id": "US2", "text": "Battery Alarm" },
+      { "id": "US3", "text": "No Output" }
+    ],
+    "logic": [
+      { "id": "U_ONLN", "text": "UPS online?", "options": ["Yes", "No"] },
+      { "id": "U_ALRM", "text": "Battery alarm?", "options": ["Yes", "No"] },
+      { "id": "U_TIME", "text": "Runtime remaining?", "type": "text" },
+      { "id": "U_CODE", "text": "Fault code?", "type": "text" },
+      { "id": "U_PWR", "text": "Output power available?", "options": ["Yes", "No"] },
+      { "id": "U_REPL", "text": "Battery replacement overdue?", "options": ["Yes", "No"] }
+    ],
+    "resolutions": [
+      { "cause": "Battery Failure", "condition": { "U_ALRM": "Yes" }, "score": 90, "recommendation": "Replace UPS battery bank." },
+      { "cause": "Controller Fault", "condition": { "U_CODE": "Yes" }, "score": 80, "recommendation": "Technician to diagnose UPS internal electronics." }
+    ]
+  },
+
+  "plumbing_burst": {
+    "symptoms": [
+      { "id": "BS1", "text": "Active Leak" },
+      { "id": "BS2", "text": "Low Pressure" }
+    ],
+    "logic": [
+      { "id": "P_ACTV", "text": "Active leak?", "options": ["Yes", "No"] },
+      { "id": "P_ISOL", "text": "Water isolated?", "options": ["Yes", "No"] },
+      { "id": "P_MATR", "text": "Pipe material?", "options": ["Copper", "PVC", "Galvanized", "Unknown"] },
+      { "id": "P_SEVR", "text": "Leak severity?", "options": ["Drip", "Stream", "Gushing"] },
+      { "id": "P_PROP", "text": "Property damage?", "options": ["None", "Minor", "Significant"] },
+      { "id": "P_RISK", "text": "Safety risk?", "options": ["Yes", "No"] }
+    ],
+    "resolutions": [
+      { "cause": "Pipe Burst", "condition": { "P_SEVR": "Gushing" }, "score": 95, "recommendation": "EMERGENCY: Isolate main water supply and dispatch plumber." },
+      { "cause": "Joint Leak", "condition": { "P_SEVR": "Drip" }, "score": 70, "recommendation": "Plumber to repair leaking joint." }
+    ]
+  },
+
+  "plumbing_blocked": {
+    "symptoms": [
+      { "id": "BK1", "text": "Slow Drain" },
+      { "id": "BK2", "text": "Overflow" },
+      { "id": "BK3", "text": "Smell" }
+    ],
+    "logic": [
+      { "id": "D_BACK", "text": "Water backing up?", "options": ["Yes", "No"] },
+      { "id": "D_LOCA", "text": "Internal or external?", "options": ["Internal", "External"] },
+      { "id": "D_SEWG", "text": "Sewage involved?", "options": ["Yes", "No"], "emergencyOn": ["Yes"] },
+      { "id": "D_CBLK", "text": "Completely blocked?", "options": ["Yes", "No"] },
+      { "id": "D_OVER", "text": "Overflow occurring?", "options": ["Yes", "No"] }
+    ],
+    "resolutions": [
+      { "cause": "Main Drain Blockage", "condition": { "D_LOCA": "External", "D_OVER": "Yes" }, "score": 90, "recommendation": "Plumber to rod/jet main external line." },
+      { "cause": "Internal Clog", "condition": { "D_LOCA": "Internal" }, "score": 80, "recommendation": "Clean trap or rod internal branch line." }
+    ]
+  },
+
+  "plumbing_geyser": {
+    "symptoms": [
+      { "id": "GY1", "text": "No Hot Water" },
+      { "id": "GY2", "text": "Water Leak" },
+      { "id": "GY3", "text": "Tripping Electricity" }
+    ],
+    "logic": [
+      { "id": "H_AVAL", "text": "Hot water available?", "options": ["Yes", "No"] },
+      { "id": "H_TEMP", "text": "Water temperature?", "options": ["Cold", "Lukewarm", "Scalding"] },
+      { "id": "H_LEAK", "text": "Water leak?", "options": ["Yes", "No"] },
+      { "id": "H_VALV", "text": "Safety valve leaking?", "options": ["Yes", "No"] },
+      { "id": "H_TRIP", "text": "Element tripping?", "options": ["Yes", "No"] },
+      { "id": "H_THER", "text": "Thermostat suspected?", "options": ["Yes", "No"] }
+    ],
+    "resolutions": [
+      { "cause": "Element Failure", "condition": { "H_AVAL": "No", "H_TRIP": "Yes" }, "score": 95, "recommendation": "Replace geyser heating element." },
+      { "cause": "Thermostat Failure", "condition": { "H_TEMP": "Cold", "H_TRIP": "No" }, "score": 85, "recommendation": "Replace geyser thermostat." },
+      { "cause": "Valve Failure", "condition": { "H_VALV": "Yes" }, "score": 80, "recommendation": "Replace Pressure Reducing Valve (PRV)." }
+    ]
+  },
+
+  "trolley": {
+    "symptoms": [
+      { "id": "TS1", "text": "Wheel Damage" },
+      { "id": "TS2", "text": "Handle Damage" },
+      { "id": "TS3", "text": "Bent Frame" }
+    ],
+    "logic": [
+      { "id": "T_WHEL", "text": "Wheel issue?", "options": ["Yes", "No"] },
+      { "id": "T_FIXD", "text": "Swivel or fixed wheel?", "options": ["Swivel", "Fixed"], "conditional": { "field": "T_WHEL", "value": "Yes" } },
+      { "id": "T_HNDL", "text": "Handle damaged?", "options": ["Yes", "No"] },
+      { "id": "T_SUPP", "text": "Ear supports damaged?", "options": ["Yes", "No"] },
+      { "id": "T_BENT", "text": "Frame bent?", "options": ["Yes", "No"] },
+      { "id": "T_QTY", "text": "Quantity affected?", "type": "number" }
+    ],
+    "resolutions": [
+      { "cause": "Wheel Wear", "condition": { "T_WHEL": "Yes" }, "score": 80, "recommendation": "Replace trolley wheels." },
+      { "cause": "Frame Damage", "condition": { "T_BENT": "Yes" }, "score": 90, "recommendation": "Withdraw trolley from service for welding/repair." }
+    ]
+  },
+
+  "bakery_oven": {
+    "symptoms": [
+      { "id": "OV1", "text": "Not Heating" },
+      { "id": "OV2", "text": "Uneven Baking" },
+      { "id": "OV3", "text": "Fan Failure" }
+    ],
+    "logic": [
+      { "id": "O_HEAT", "text": "Heating?", "options": ["Yes", "No"] },
+      { "id": "O_SETP", "text": "Reaches setpoint?", "options": ["Yes", "No"] },
+      { "id": "O_FAN", "text": "Fan operating?", "options": ["Yes", "No"] },
+      { "id": "O_UNVN", "text": "Uneven baking?", "options": ["Yes", "No"] },
+      { "id": "O_CODE", "text": "Error code?", "type": "text" },
+      { "id": "O_SEAL", "text": "Door seal condition?", "options": ["Good", "Leaking", "Missing"] }
+    ],
+    "resolutions": [
+      { "cause": "Heating Element Failure", "condition": { "O_HEAT": "No" }, "score": 90, "recommendation": "Replace oven heating elements." },
+      { "cause": "Circulation Fan Failure", "condition": { "O_FAN": "No" }, "score": 85, "recommendation": "Repair/Replace convection fan motor." }
+    ]
+  },
+
+  "bakery_mixer": {
+    "symptoms": [
+      { "id": "MX1", "text": "Won't Start" },
+      { "id": "MX2", "text": "Noisy" },
+      { "id": "MX3", "text": "Slow" }
+    ],
+    "logic": [
+      { "id": "M_STRT", "text": "Starts?", "options": ["Yes", "No"] },
+      { "id": "M_ROTA", "text": "Bowl rotates?", "options": ["Yes", "No"] },
+      { "id": "M_NOIS", "text": "Motor noise?", "options": ["Normal", "Grinding", "Squealing"] },
+      { "id": "M_TRIP", "text": "Overload trip?", "options": ["Yes", "No"] },
+      { "id": "M_GEAR", "text": "Gearbox noise?", "options": ["Yes", "No"] },
+      { "id": "M_SPED", "text": "Speed control working?", "options": ["Yes", "No"] }
+    ],
+    "resolutions": [
+      { "cause": "Drive Belt/Gearbox Failure", "condition": { "M_ROTA": "No", "M_STRT": "Yes" }, "score": 90, "recommendation": "Inspect drive belts and gearbox for failure." },
+      { "cause": "Motor Fault", "condition": { "M_TRIP": "Yes" }, "score": 80, "recommendation": "Electrician to check motor windings and overload relay." }
+    ]
+  },
+
+  "bakery_divider": {
+    "symptoms": [
+      { "id": "DV1", "text": "Jam" },
+      { "id": "DV2", "text": "Incorrect Cut" },
+      { "id": "DV3", "text": "Hydraulic Leak" }
+    ],
+    "logic": [
+      { "id": "D_STRT", "text": "Starts?", "options": ["Yes", "No"] },
+      { "id": "D_FEED", "text": "Dough feeding?", "options": ["Yes", "No"] },
+      { "id": "D_CUTT", "text": "Cutting correctly?", "options": ["Yes", "No"] },
+      { "id": "D_JAM", "text": "Product jam?", "options": ["Yes", "No"] },
+      { "id": "D_HYDR", "text": "Hydraulic fault?", "options": ["Yes", "No"] },
+      { "id": "D_GARD", "text": "Safety guard engaged?", "options": ["Yes", "No"] }
+    ],
+    "resolutions": [
+      { "cause": "Mechanical Jam", "condition": { "D_JAM": "Yes" }, "score": 85, "recommendation": "Isolate power and clear dough blockage." },
+      { "cause": "Safety Interlock Fault", "condition": { "D_STRT": "No", "D_GARD": "Yes" }, "score": 75, "recommendation": "Check safety guard proximity switch." }
+    ]
+  },
+
+  "butchery_bandsaw": {
+    "symptoms": [
+      { "id": "BSW1", "text": "Blade Won't Spin" },
+      { "id": "BSW2", "text": "Vibration" },
+      { "id": "BSW3", "text": "Poor Cutting" }
+    ],
+    "logic": [
+      { "id": "B_ROTA", "text": "Blade rotating?", "options": ["Yes", "No"] },
+      { "id": "B_COND", "text": "Blade condition?", "options": ["Sharp", "Dull", "Broken"] },
+      { "id": "B_GARD", "text": "Safety guard fitted?", "options": ["Yes", "No"], "emergencyOn": ["No"] },
+      { "id": "B_MOTR", "text": "Motor running?", "options": ["Yes", "No"] },
+      { "id": "B_VIBR", "text": "Excess vibration?", "options": ["Yes", "No"] },
+      { "id": "B_JAM", "text": "Product jammed?", "options": ["Yes", "No"] }
+    ],
+    "resolutions": [
+      { "cause": "Drive Pulley Fault", "condition": { "B_ROTA": "No", "B_MOTR": "Yes" }, "score": 90, "recommendation": "Check drive pulley and keyway." },
+      { "cause": "Bearing Failure", "condition": { "B_VIBR": "Yes" }, "score": 85, "recommendation": "Replace main blade wheel bearings." }
+    ]
+  },
+
+  "butchery_mincer": {
+    "symptoms": [
+      { "id": "MN1", "text": "Blockage" },
+      { "id": "MN2", "text": "Slow" },
+      { "id": "MN3", "text": "Won't Start" }
+    ],
+    "logic": [
+      { "id": "M_MOTR", "text": "Motor running?", "options": ["Yes", "No"] },
+      { "id": "M_FEED", "text": "Product feeding?", "options": ["Yes", "No"] },
+      { "id": "M_QUAL", "text": "Output quality?", "options": ["Good", "Smearing", "Lumpy"] },
+      { "id": "M_BLCK", "text": "Blockage?", "options": ["Yes", "No"] },
+      { "id": "M_AUGR", "text": "Auger rotating?", "options": ["Yes", "No"] },
+      { "id": "M_OVLD", "text": "Motor overload?", "options": ["Yes", "No"] }
+    ],
+    "resolutions": [
+      { "cause": "Blunt Knives/Plates", "condition": { "M_QUAL": "Smearing" }, "score": 80, "recommendation": "Sharpen or replace mincer knives and plates." },
+      { "cause": "Coupling Failure", "condition": { "M_AUGR": "No", "M_MOTR": "Yes" }, "score": 90, "recommendation": "Replace drive coupling." }
+    ]
+  },
+
+  "butchery_vacuum": {
+    "symptoms": [
+      { "id": "VC1", "text": "No Vacuum" },
+      { "id": "VC2", "text": "Bad Seal" },
+      { "id": "VC3", "text": "Error Code" }
+    ],
+    "logic": [
+      { "id": "V_PUMP", "text": "Vacuum pump operating?", "options": ["Yes", "No"] },
+      { "id": "V_SEAL", "text": "Seal forming?", "options": ["Yes", "No"] },
+      { "id": "V_LEVL", "text": "Vacuum level achieved?", "options": ["Full", "Partial", "None"] },
+      { "id": "V_LEAK", "text": "Chamber leaks?", "options": ["Yes", "No"] },
+      { "id": "V_CODE", "text": "Error code?", "type": "text" }
+    ],
+    "resolutions": [
+      { "cause": "Pump Oil Contamination", "condition": { "V_LEVL": "Partial" }, "score": 75, "recommendation": "Change vacuum pump oil." },
+      { "cause": "Seal Bar Element Failure", "condition": { "V_SEAL": "No" }, "score": 90, "recommendation": "Replace seal bar heating wire and Teflon tape." }
+    ]
+  },
+
+  "butchery_slicer": {
+    "symptoms": [
+      { "id": "SL1", "text": "Blade Won't Spin" },
+      { "id": "SL2", "text": "Adjustment Stuck" },
+      { "id": "SL3", "text": "Vibration" }
+    ],
+    "logic": [
+      { "id": "S_ROTA", "text": "Blade rotating?", "options": ["Yes", "No"] },
+      { "id": "S_ADJU", "text": "Thickness adjustment working?", "options": ["Yes", "No"] },
+      { "id": "S_FEED", "text": "Product feeding?", "options": ["Yes", "No"] },
+      { "id": "S_GARD", "text": "Safety guard fitted?", "options": ["Yes", "No"] },
+      { "id": "S_VIBR", "text": "Excess vibration?", "options": ["Yes", "No"] }
+    ],
+    "resolutions": [
+      { "cause": "Drive Belt Snapped", "condition": { "S_ROTA": "No" }, "score": 90, "recommendation": "Replace slicer drive belt." },
+      { "cause": "Slide Lubrication Required", "condition": { "S_ADJU": "No" }, "score": 70, "recommendation": "Clean and lubricate thickness slide mechanism." }
+    ]
+  },
+
+  "deli_fryer": {
+    "symptoms": [
+      { "id": "FR1", "text": "Not Heating" },
+      { "id": "FR2", "text": "Oil Leak" },
+      { "id": "FR3", "text": "Slow Recovery" }
+    ],
+    "logic": [
+      { "id": "F_HEAT", "text": "Heating?", "options": ["Yes", "No"] },
+      { "id": "F_TEMP", "text": "Reaching temperature?", "options": ["Yes", "No"] },
+      { "id": "F_LEVL", "text": "Oil level?", "options": ["Correct", "Low"] },
+      { "id": "F_TRIP", "text": "High limit trip?", "options": ["Yes", "No"] },
+      { "id": "F_MECH", "text": "Basket mechanism?", "options": ["Working", "Failed", "N/A"] }
+    ],
+    "resolutions": [
+      { "cause": "Contactor Failure", "condition": { "F_HEAT": "No", "F_TRIP": "No" }, "score": 85, "recommendation": "Technician to replace heating contactor." },
+      { "cause": "High Limit Tripped", "condition": { "F_TRIP": "Yes" }, "score": 90, "recommendation": "Reset high limit and check for thermostat overshoot." }
+    ]
+  },
+
+  "deli_grill": {
+    "symptoms": [
+      { "id": "GR1", "text": "Cold Spots" },
+      { "id": "GR2", "text": "Won't Start" },
+      { "id": "GR3", "text": "Smell" }
+    ],
+    "logic": [
+      { "id": "G_HEAT", "text": "Heating?", "options": ["Yes", "No"] },
+      { "id": "G_STAB", "text": "Temperature stable?", "options": ["Yes", "No"] },
+      { "id": "G_ELEM", "text": "Elements functioning?", "options": ["All", "Some", "None"] },
+      { "id": "G_SPOT", "text": "Hot spots?", "options": ["Yes", "No"] },
+      { "id": "G_CTRL", "text": "Controls responding?", "options": ["Yes", "No"] }
+    ],
+    "resolutions": [
+      { "cause": "Element Burnout", "condition": { "G_ELEM": "Some" }, "score": 80, "recommendation": "Replace failed heating elements." },
+      { "cause": "Simmerstat Failure", "condition": { "G_STAB": "No" }, "score": 75, "recommendation": "Replace control simmerstats." }
+    ]
+  },
+
+  "deli_bainmarie": {
+    "symptoms": [
+      { "id": "BM1", "text": "Not Heating" },
+      { "id": "BM2", "text": "Water Leak" }
+    ],
+    "logic": [
+      { "id": "B_WLVL", "text": "Water level correct?", "options": ["Yes", "No"] },
+      { "id": "B_HEAT", "text": "Heating?", "options": ["Yes", "No"] },
+      { "id": "B_STAB", "text": "Temperature stable?", "options": ["Yes", "No"] },
+      { "id": "B_THER", "text": "Thermostat functioning?", "options": ["Yes", "No"] }
+    ],
+    "resolutions": [
+      { "cause": "Scale Build-up", "condition": { "B_HEAT": "Yes", "B_STAB": "No" }, "score": 70, "recommendation": "Descale unit and clean element." },
+      { "cause": "Dry Burn Failure", "condition": { "B_HEAT": "No", "B_WLVL": "No" }, "score": 90, "recommendation": "Replace element damaged by low water." }
+    ]
+  },
+
+  "deli_combi": {
+    "symptoms": [
+      { "id": "CO1", "text": "Error Code" },
+      { "id": "CO2", "text": "No Steam" },
+      { "id": "CO3", "text": "Not Heating" }
+    ],
+    "logic": [
+      { "id": "C_HEAT", "text": "Heating?", "options": ["Yes", "No"] },
+      { "id": "C_STEM", "text": "Steam generation?", "options": ["Yes", "No"] },
+      { "id": "C_FANO", "text": "Fan operation?", "options": ["Yes", "No"] },
+      { "id": "C_SEAL", "text": "Door seal?", "options": ["Good", "Leaking"] },
+      { "id": "C_CODE", "text": "Error code?", "type": "text" },
+      { "id": "C_DRAN", "text": "Drainage working?", "options": ["Yes", "No"] }
+    ],
+    "resolutions": [
+      { "cause": "Steam Generator Scale", "condition": { "C_STEM": "No" }, "score": 85, "recommendation": "Descale steam generator or replace probes." },
+      { "cause": "Drainage Blockage", "condition": { "C_DRAN": "No" }, "score": 80, "recommendation": "Clear oven drain of food debris." }
+    ]
+  },
+
+  "fv_sealer": {
+    "symptoms": [
+      { "id": "SR1", "text": "Not Heating" },
+      { "id": "SR2", "text": "Exposed Wire" },
+      { "id": "SR3", "text": "Bad Seal" }
+    ],
+    "logic": [
+      { "id": "S_POWR", "text": "Powers up?", "options": ["Yes", "No"] },
+      { "id": "S_STRP", "text": "Heating strip intact?", "options": ["Yes", "No"] },
+      { "id": "S_TEFL", "text": "Teflon intact?", "options": ["Yes", "No"] },
+      { "id": "S_QUAL", "text": "Seal quality?", "options": ["Good", "Weak", "Burnt"] },
+      { "id": "S_HING", "text": "Hinge condition?", "options": ["Good", "Broken"] },
+      { "id": "S_WIRE", "text": "Exposed wire visible?", "options": ["Yes", "No"], "emergencyOn": ["Yes"] }
+    ],
+    "resolutions": [
+      { "cause": "Heating Element Broken", "condition": { "S_STRP": "No" }, "score": 95, "recommendation": "Replace sealer heating wire." },
+      { "cause": "Teflon Replacement Required", "condition": { "S_QUAL": "Burnt" }, "score": 80, "recommendation": "Replace burnt Teflon tape." }
+    ]
+  },
+
+  "fv_wrapper": {
+    "symptoms": [
+      { "id": "WR1", "text": "Film Jam" },
+      { "id": "WR2", "text": "Not Cutting" },
+      { "id": "WR3", "text": "Won't Heat" }
+    ],
+    "logic": [
+      { "id": "W_POWR", "text": "Powers up?", "options": ["Yes", "No"] },
+      { "id": "W_FEED", "text": "Film feeding?", "options": ["Yes", "No"] },
+      { "id": "W_WIRE", "text": "Heating wire intact?", "options": ["Yes", "No"] },
+      { "id": "W_QUAL", "text": "Wrapping quality?", "options": ["Good", "Loose", "Bad Seal"] },
+      { "id": "W_CTRL", "text": "Controls functioning?", "options": ["Yes", "No"] }
+    ],
+    "resolutions": [
+      { "cause": "Broken Cutting Wire", "condition": { "W_WIRE": "No" }, "score": 95, "recommendation": "Replace wrapper cutting wire." },
+      { "cause": "Feed Roller Fault", "condition": { "W_FEED": "No" }, "score": 80, "recommendation": "Clean and align film feed rollers." }
+    ]
+  },
+
+  "hvac_aircon": {
+    "symptoms": [
+      { "id": "AC1", "text": "No Airflow" },
+      { "id": "AC2", "text": "Not Cooling" },
+      { "id": "AC3", "text": "Leaking Water" },
+      { "id": "AC4", "text": "Error Code" }
+    ],
+    "logic": [
+      { "id": "A_AIRF", "text": "Airflow present?", "options": ["Yes", "No"] },
+      { "id": "A_COOL", "text": "Cooling achieved?", "options": ["Yes", "No"] },
+      { "id": "A_HEAT", "text": "Heating achieved?", "options": ["Yes", "No"] },
+      { "id": "A_LEAK", "text": "Water leaking?", "options": ["Yes", "No"] },
+      { "id": "A_CODE", "text": "Error code?", "type": "text" },
+      { "id": "A_OFAN", "text": "Outdoor fan operating?", "options": ["Yes", "No"] },
+      { "id": "A_IFAN", "text": "Indoor fan operating?", "options": ["Yes", "No"] },
+      { "id": "A_FILT", "text": "Filter dirty?", "options": ["Yes", "No"] }
+    ],
+    "resolutions": [
+      { "cause": "Blocked Filters", "condition": { "A_AIRF": "No", "A_FILT": "Yes" }, "score": 80, "recommendation": "Clean indoor unit filters." },
+      { "cause": "Refrigerant Leak", "condition": { "A_COOL": "No", "A_OFAN": "Yes" }, "score": 85, "recommendation": "Technician to leak test and recharge gas." },
+      { "cause": "Drain Blockage", "condition": { "A_LEAK": "Yes" }, "score": 90, "recommendation": "Clear aircon condensate drain pipe." }
+    ]
+  },
+
+  "fire_extinguisher": {
+    "symptoms": [
+      { "id": "FE1", "text": "Low Pressure" },
+      { "id": "FE2", "text": "Expired" },
+      { "id": "FE3", "text": "Missing" }
+    ],
+    "logic": [
+      { "id": "F_MISS", "text": "Missing?", "options": ["Yes", "No"] },
+      { "id": "F_PRES", "text": "Pressure low?", "options": ["Yes", "No"] },
+      { "id": "F_EXPR", "text": "Expired?", "options": ["Yes", "No"] },
+      { "id": "F_DAMG", "text": "Damaged?", "options": ["Yes", "No"] },
+      { "id": "F_DSCH", "text": "Discharged?", "options": ["Yes", "No"] }
+    ],
+    "resolutions": [
+      { "cause": "Recharge Required", "condition": { "F_PRES": "Yes" }, "score": 95, "recommendation": "Service and recharge fire extinguisher." },
+      { "cause": "Replacement Needed", "condition": { "F_MISS": "Yes" }, "score": 100, "recommendation": "URGENT: Replace missing fire extinguisher." }
+    ]
+  },
+
+  "fire_smoke": {
+    "symptoms": [
+      { "id": "FD1", "text": "Fault Light" },
+      { "id": "FD2", "text": "Bleeping" }
+    ],
+    "logic": [
+      { "id": "F_LITE", "text": "Fault light?", "options": ["Yes", "No"] },
+      { "id": "F_DRTY", "text": "Detector dirty?", "options": ["Yes", "No"] },
+      { "id": "F_COMM", "text": "Communication fault?", "options": ["Yes", "No"] },
+      { "id": "F_BATT", "text": "Battery fault?", "options": ["Yes", "No"] }
+    ],
+    "resolutions": [
+      { "cause": "Dirty Sensor", "condition": { "F_DRTY": "Yes" }, "score": 80, "recommendation": "Clean smoke detector sensor." },
+      { "cause": "Battery Expired", "condition": { "F_BATT": "Yes" }, "score": 90, "recommendation": "Replace smoke detector backup battery." }
+    ]
+  },
+
+  "fire_panel": {
+    "symptoms": [
+      { "id": "FP1", "text": "System Fault" },
+      { "id": "FP2", "text": "False Alarm" }
+    ],
+    "logic": [
+      { "id": "P_ALRM", "text": "Alarm active?", "options": ["Yes", "No"] },
+      { "id": "P_FLT", "text": "Fault active?", "options": ["Yes", "No"] },
+      { "id": "P_ZONE", "text": "Zone affected?", "type": "text" },
+      { "id": "P_BATT", "text": "Battery fault?", "options": ["Yes", "No"] },
+      { "id": "P_COMM", "text": "Communication fault?", "options": ["Yes", "No"] }
+    ],
+    "resolutions": [
+      { "cause": "Loop Fault", "condition": { "P_COMM": "Yes" }, "score": 85, "recommendation": "Technician to check integrity of fire loop." },
+      { "cause": "Power Supply Fault", "condition": { "P_BATT": "Yes" }, "score": 90, "recommendation": "Check fire panel PSU and batteries." }
+    ]
+  },
+
+  "pest_rodent": {
+    "symptoms": [
+      { "id": "PR1", "text": "Sighting" },
+      { "id": "PR2", "text": "Droppings" }
+    ],
+    "logic": [
+      { "id": "R_DROP", "text": "Droppings found?", "options": ["Yes", "No"] },
+      { "id": "R_SIDE", "text": "Live rodents sighted?", "options": ["Yes", "No"] },
+      { "id": "R_LOCA", "text": "Location?", "type": "text" },
+      { "id": "R_CONT", "text": "Product contamination?", "options": ["Yes", "No"], "emergencyOn": ["Yes"] },
+      { "id": "R_FREQ", "text": "Frequency observed?", "options": ["Once", "Daily", "Occasional"] }
+    ],
+    "resolutions": [
+      { "cause": "Infestation", "condition": { "R_SIDE": "Yes" }, "score": 90, "recommendation": "Call Pest Control for urgent baiting and trapping." },
+      { "cause": "Hygiene Gap", "condition": { "R_CONT": "Yes" }, "score": 100, "recommendation": "IMMEDIATE: Discard contaminated stock and deep clean area." }
+    ]
+  },
+
+  "pest_insect": {
+    "symptoms": [
+      { "id": "PI1", "text": "Flying Insects" },
+      { "id": "PI2", "text": "Crawling Insects" }
+    ],
+    "logic": [
+      { "id": "I_FLYN", "text": "Flying insects?", "options": ["Yes", "No"] },
+      { "id": "I_CRAW", "text": "Crawling insects?", "options": ["Yes", "No"] },
+      { "id": "I_PROD", "text": "Product affected?", "options": ["Yes", "No"] },
+      { "id": "I_SRCE", "text": "Source identified?", "type": "text" }
+    ],
+    "resolutions": [
+      { "cause": "Cockroach Infestation", "condition": { "I_CRAW": "Yes" }, "score": 90, "recommendation": "Apply gel baiting and crack/crevice treatment." },
+      { "cause": "Fly Issue", "condition": { "I_FLYN": "Yes" }, "score": 80, "recommendation": "Service electronic fly killers and check screens." }
+    ]
+  },
+
+  "hygiene_station": {
+    "symptoms": [
+      { "id": "HS1", "text": "Empty" },
+      { "id": "HS2", "text": "Damaged" }
+    ],
+    "logic": [
+      { "id": "H_SANI", "text": "Sanitiser available?", "options": ["Yes", "No"] },
+      { "id": "H_DAMG", "text": "Unit damaged?", "options": ["Yes", "No"] },
+      { "id": "H_REFL", "text": "Refill required?", "options": ["Yes", "No"] },
+      { "id": "H_COMP", "text": "Location compliant?", "options": ["Yes", "No"] }
+    ],
+    "resolutions": [
+      { "cause": "Refill Needed", "condition": { "H_SANI": "No" }, "score": 100, "recommendation": "Store team to refill sanitiser station immediately." },
+      { "cause": "Vandalism/Wear", "condition": { "H_DAMG": "Yes" }, "score": 70, "recommendation": "Replace damaged hygiene dispenser." }
+    ]
+  },
+
+  "general": {
+    "symptoms": [
+      { "id": "GS1", "text": "General Fault" },
+      { "id": "GS2", "text": "Other" }
+    ],
+    "logic": [
+      { "id": "GEN_DESC", "text": "Please describe the fault in detail.", "type": "text" },
+      { "id": "GEN_URG", "text": "Is this situation urgent?", "options": ["Yes", "No"] }
+    ],
+    "resolutions": []
   }
 }
