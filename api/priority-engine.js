@@ -7,9 +7,12 @@ function calculatePriority(sessionData) {
 
   // Priority 1 — Emergency
   // Triggered by safety risks, explicit emergencies, cold chain failure, or trading stop
+  const lowRisk = (safetyRisk || '').toLowerCase();
   const isEmergency =
     emergencyDetected === true ||
-    (typeof safetyRisk === 'string' && safetyRisk.toLowerCase().includes('risk')) ||
+    lowRisk.includes('yes') ||
+    lowRisk.includes('risk') ||
+    lowRisk.includes('danger') ||
     foodSafetyResults?.FS_COLDCHAIN === 'Yes' ||
     operationalImpact === 'Trading Stopped' ||
     operationalImpact === 'Store Wide Impact';
@@ -24,7 +27,8 @@ function calculatePriority(sessionData) {
     criticality === 'Critical' ||
     operationalImpact === 'Multiple Departments Impacted' ||
     foodSafetyResults?.FS_PRODTEMP === 'Yes' ||
-    foodSafetyResults?.FS_STOCK === 'Yes';
+    foodSafetyResults?.FS_STOCK === 'Yes' ||
+    foodSafetyResults?.FS_CONTAM === 'Yes';
 
   if (isUrgent) {
     return { level: 2, label: 'Urgent', sla: '4 Hours', colour: '#F7B731' };
