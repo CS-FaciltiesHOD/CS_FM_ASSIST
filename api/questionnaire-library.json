@@ -1,0 +1,45 @@
+{
+  "identification": {
+    "STORE": "Please provide your 4-digit Store Code (e.g. 1002).",
+    "REPORTER": "What is your full name?",
+    "CATEGORY": "Please select the equipment category:",
+    "EQUIPMENT": "Select the specific equipment for [category]:",
+    "LOCATION": "Where exactly is the unit located? (e.g. Aisle 3, Bakery)"
+  },
+  "asset_details": {
+    "BRAND": "What is the Brand of the equipment? (Type 'N/A' to skip)",
+    "MODEL": "What is the Model? (Type 'N/A' to skip)",
+    "TAG": "What is the Asset Tag? (Type 'N/A' to skip)",
+    "SERIAL": "What is the Serial Number? (Type 'N/A' to skip)"
+  },
+  "safety": {
+    "RISK": "Are there any immediate safety risks?",
+    "EMERGENCY": "Is any emergency condition present?",
+    "EMERGENCY_OPTIONS": ["None", "Fire", "Flooding", "Sparking", "Gas Leak", "Exposed Live Conductors"]
+  },
+  "impact": {
+    "OPERATIONAL": "What is the operational impact?",
+    "OPTIONS": ["No Impact", "Minor Impact", "Department Impact", "Multiple Departments Impacted", "Store Wide Impact", "Trading Stopped"]
+  },
+  "electrical": {
+    "LIGHTING_AREA": { "id": "L_AREA", "text": "Is the affected lighting:", "options": ["Single Light", "Multiple Lights", "Entire Area"] },
+    "LIGHTING_LAMP": { "id": "L_LAMP", "text": "Is the lamp physically damaged?", "options": ["Yes", "No"] },
+    "BREAKER_TRIPPED": { "id": "E_TRIP", "text": "Is the circuit breaker tripped at the DB board?", "options": ["Yes", "No", "Unknown"] },
+    "BREAKER_RESET": { "id": "E_RESET", "text": "Reset the breaker. Is power restored?", "options": ["Yes", "No"] },
+    "FITTING_POWER": { "id": "L_PWR", "text": "Is power present at the fitting?", "options": ["Yes", "No", "Unknown"] },
+    "SOCKET_TEST": { "id": "S_TEST", "text": "Has another appliance been tested in the socket?", "options": ["Yes - and it works", "Yes - it doesn't work", "No"] },
+    "DB_BREAKER": { "id": "DB_BRK", "text": "Which breaker is affected? (Check labels)", "type": "text" },
+    "DB_DAMAGE": { "id": "DB_DMG", "text": "Is there visible damage, burn marks or a hot breaker?", "options": ["Yes", "No"] },
+    "REFRIG_CONTROLLER": { "id": "R_CTRL", "text": "Is there power to the controller display?", "options": ["Yes", "No"] }
+  },
+  "food_safety": [
+    { "id": "FS_COLDCHAIN", "text": "Has the cold chain been compromised?", "options": ["Yes", "No", "Unknown"] },
+    { "id": "FS_PRODTEMP", "text": "Is product above the safe storage temperature?", "options": ["Yes", "No", "Unknown"] },
+    { "id": "FS_CONTAM", "text": "Is there a risk of contamination?", "options": ["Yes", "No", "Unknown"] },
+    { "id": "FS_PRODUCTION", "text": "Has production stopped due to this fault?", "options": ["Yes", "No"] },
+    { "id": "FS_STOCK", "text": "Is stock at risk of spoilage or disposal?", "options": ["Yes", "No", "Unknown"] }
+  ],
+  "media": {
+    "PHOTO": "Can you take a photo/video? Send it via WhatsApp if possible. (Yes - sending / No)"
+  }
+}
