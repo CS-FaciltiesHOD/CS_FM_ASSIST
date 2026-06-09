@@ -69,6 +69,7 @@ function formatWhatsAppPayload(to, text) {
 }
 
 module.exports = async (req, res) => {
+    // 1. Health Check & Handshake
     if (req.method === "GET") {
         if (req.query["hub.verify_token"]) {
             if (req.query["hub.verify_token"] === process.env.WHATSAPP_VERIFY_TOKEN) {
@@ -84,6 +85,15 @@ module.exports = async (req, res) => {
     if (req.method !== 'POST') return res.status(405).end();
 
     console.log('WA Webhook: Incoming POST request:', JSON.stringify(req.body));
+
+    // 2. Check for missing critical environment variables
+    const missing = [];
+    if (!process.env.WHATSAPP_ACCESS_TOKEN) missing.push('WHATSAPP_ACCESS_TOKEN');
+    if (!process.env.WHATSAPP_PHONE_NUMBER_ID) missing.push('WHATSAPP_PHONE_NUMBER_ID');
+    if (missing.length > 0) {
+        console.error('WA Webhook: CRITICAL ERROR - Missing variables:', missing.join(', '));
+        return res.status(500).json({ error: 'Missing configuration', missing });
+    }
 
     try {
         const entry = req.body.entry?.[0];
