@@ -69,30 +69,51 @@ function formatWhatsAppPayload(to, text) {
 }
 
 module.exports = async (req, res) => {
+    const projectHost = req.headers.host || 'unknown';
+    const isSouthAfricasSoul = projectHost.includes('southafricassoul');
+
     // 1. Health Check & Handshake
     if (req.method === "GET") {
         if (req.query["hub.verify_token"]) {
-            if (req.query["hub.verify_token"] === process.env.WHATSAPP_VERIFY_TOKEN) {
-                console.log('WA Webhook: Verification Successful');
+            const verifyToken = process.env.WHATSAPP_VERIFY_TOKEN;
+            if (!verifyToken) {
+                console.error(`WA Webhook [${projectHost}]: Verification Failed - WHATSAPP_VERIFY_TOKEN not set in Vercel.`);
+                return res.status(500).send('Configuration Error: WHATSAPP_VERIFY_TOKEN missing');
+            }
+
+            if (req.query["hub.verify_token"] === verifyToken) {
+                console.log(`WA Webhook [${projectHost}]: Verification Successful`);
                 return res.status(200).send(req.query["hub.challenge"]);
             }
-            console.error('WA Webhook: Verification Failed - Tokens do not match');
+            console.error(`WA Webhook [${projectHost}]: Verification Failed - Tokens do not match. Received: ${req.query["hub.verify_token"]}`);
             return res.status(403).end();
         }
-        return res.status(200).json({ status: 'FM Assist WhatsApp Webhook Online', version: API_VERSION });
+        return res.status(200).json({
+            status: 'FM Assist WhatsApp Webhook Online',
+            version: API_VERSION,
+            project: projectHost,
+            ready: !!(process.env.WHATSAPP_ACCESS_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID && process.env.WHATSAPP_VERIFY_TOKEN)
+        });
     }
 
     if (req.method !== 'POST') return res.status(405).end();
 
-    console.log('WA Webhook: Incoming POST request:', JSON.stringify(req.body));
+    console.log(`WA Webhook [${projectHost}]: Incoming POST request:`, JSON.stringify(req.body));
 
     // 2. Check for missing critical environment variables
     const missing = [];
     if (!process.env.WHATSAPP_ACCESS_TOKEN) missing.push('WHATSAPP_ACCESS_TOKEN');
     if (!process.env.WHATSAPP_PHONE_NUMBER_ID) missing.push('WHATSAPP_PHONE_NUMBER_ID');
+    if (!process.env.WHATSAPP_VERIFY_TOKEN) missing.push('WHATSAPP_VERIFY_TOKEN');
+
     if (missing.length > 0) {
-        console.error('WA Webhook: CRITICAL ERROR - Missing variables:', missing.join(', '));
-        return res.status(500).json({ error: 'Missing configuration', missing });
+        console.error(`WA Webhook [${projectHost}]: CRITICAL ERROR - Missing variables:`, missing.join(', '));
+        return res.status(500).json({
+            error: 'Missing configuration',
+            missing,
+            host: projectHost,
+            instruction: "Ensure these variables are set in Vercel for this project."
+        });
     }
 
     try {
