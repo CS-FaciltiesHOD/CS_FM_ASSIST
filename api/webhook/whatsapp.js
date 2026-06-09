@@ -83,7 +83,7 @@ module.exports = async (req, res) => {
 
     if (req.method !== 'POST') return res.status(405).end();
 
-    console.log('WA Webhook: Incoming POST request');
+    console.log('WA Webhook: Incoming POST request:', JSON.stringify(req.body));
 
     try {
         const entry = req.body.entry?.[0];
