@@ -70,10 +70,20 @@ function formatWhatsAppPayload(to, text) {
 
 module.exports = async (req, res) => {
     if (req.method === "GET") {
-        if (req.query["hub.verify_token"] === process.env.WHATSAPP_VERIFY_TOKEN) return res.status(200).send(req.query["hub.challenge"]);
-        return res.status(403).end();
+        if (req.query["hub.verify_token"]) {
+            if (req.query["hub.verify_token"] === process.env.WHATSAPP_VERIFY_TOKEN) {
+                console.log('WA Webhook: Verification Successful');
+                return res.status(200).send(req.query["hub.challenge"]);
+            }
+            console.error('WA Webhook: Verification Failed - Tokens do not match');
+            return res.status(403).end();
+        }
+        return res.status(200).json({ status: 'FM Assist WhatsApp Webhook Online', version: API_VERSION });
     }
+
     if (req.method !== 'POST') return res.status(405).end();
+
+    console.log('WA Webhook: Incoming POST request');
 
     try {
         const entry = req.body.entry?.[0];
@@ -83,6 +93,8 @@ module.exports = async (req, res) => {
         if (!message) return res.status(200).end();
 
         const from = message.from;
+        console.log(`WA Webhook: Message from ${from}`);
+
         const sessionId = `wa-${from}`;
         const session = await getSession(sessionId, 'whatsapp');
 
@@ -112,9 +124,11 @@ module.exports = async (req, res) => {
             await saveSession(sessionId, session, 'whatsapp');
 
             // Send reply via WhatsApp
+            console.log(`WA Webhook: Sending reply to ${from}`);
             await axios.post(`https://graph.facebook.com/${API_VERSION}/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`, formatWhatsAppPayload(from, reply), {
                 headers: { Authorization: `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}` }
             });
+            console.log(`WA Webhook: Reply sent successfully`);
 
             // If report is completed, trigger notifications and database logging
             if (reply.includes('submitted successfully')) {
