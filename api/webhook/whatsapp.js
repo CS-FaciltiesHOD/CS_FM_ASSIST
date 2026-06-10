@@ -1,19 +1,68 @@
 const axios = require('axios');
 const { getLogicResponse } = require('../logic-engine');
 const { sendFaultNotification } = require('../notify');
+const { createClient } = require('@supabase/supabase-js');
 
-const sessions = {};
-function getSession(userId) {
-    if (!sessions[userId]) {
-        sessions[userId] = { history: [], media: [], lastActive: Date.now() };
+const supabase = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
+  ? createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
+  : null;
+
+if (!supabase) {
+    console.warn('WARNING: Supabase credentials missing in WhatsApp Webhook. Falling back to in-memory (limited).');
+}
+
+async function getSession(sessionId) {
+    if (supabase) {
+        try {
+            const { data, error } = await supabase
+                .from('chat_sessions')
+                .select('*')
+                .eq('session_id', sessionId)
+                .single();
+
+            if (data) {
+                return {
+                    state: data.state_json.state,
+                    data: data.state_json.data,
+                    history: data.state_json.history || [],
+                    media: [] // Media is usually transient for the session
+                };
+            }
+        } catch (e) {
+            console.error('Error fetching session from Supabase:', e);
+        }
     }
-    sessions[userId].lastActive = Date.now();
-    return sessions[userId];
+    return { history: [], media: [], lastActive: Date.now(), state: null, data: {} };
+}
+
+async function saveSession(sessionId, session) {
+    if (supabase) {
+        try {
+            const sessionData = {
+                session_id: sessionId,
+                channel: 'whatsapp',
+                state_json: {
+                    state: session.state,
+                    data: session.data,
+                    history: session.history
+                },
+                last_active: new Date().toISOString()
+            };
+
+            const { error } = await supabase
+                .from('chat_sessions')
+                .upsert(sessionData, { onConflict: 'session_id' });
+
+            if (error) console.error('Error saving session to Supabase:', error);
+        } catch (e) {
+            console.error('Error in saveSession:', e);
+        }
+    }
 }
 
 async function downloadWhatsAppMedia(mediaId) {
     try {
-        const response = await axios.get(`https://graph.facebook.com/v17.0/${mediaId}`, {
+        const response = await axios.get(`https://graph.facebook.com/v21.0/${mediaId}`, {
             headers: { Authorization: `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}` }
         });
         const mediaUrl = response.data.url;
@@ -28,27 +77,90 @@ async function downloadWhatsAppMedia(mediaId) {
 }
 
 async function handleCompletedReport(session, userId, reportText) {
-    const lines = reportText.split('\n');
-    const getValue = (label) => {
-        const line = lines.find(l => l.toLowerCase().includes(label.toLowerCase()));
-        if (!line) return 'N/A';
-        const parts = line.split(':');
-        return parts.length < 2 ? 'N/A' : parts.slice(1).join(':').trim();
-    };
+    const d = session.data;
+    const p = d.priority || {};
+    const ticketId = d.ticketId || `FM-${Date.now().toString(36).toUpperCase()}`;
+
     const data = {
-        ticketId: reportText.match(/#([A-Z0-9-]+)/)?.[1] || 'UNKNOWN',
-        store: getValue('Store'),
-        reporter: getValue('Reported by') !== 'N/A' ? getValue('Reported by') : getValue('Reporter'),
-        category: getValue('Category'),
-        equipment: getValue('Equipment'),
-        location: getValue('Location'),
-        powerStatus: getValue('Power status'),
-        failingTo: getValue('Failing to'),
-        priority: getValue('Priority'),
-        diagnostic: getValue('Other findings'),
+        ticketId,
+        store: d.store || 'N/A',
+        reporter: d.reporter || 'N/A',
+        category: d.category || 'N/A',
+        equipment: d.equipment || 'N/A',
+        location: d.equipmentLocation || 'N/A',
+        powerStatus: d.powerStatus || 'N/A',
+        priority: p.label || 'Routine',
+        brandModel: `${d.brand || 'N/A'} / ${d.model || 'N/A'}`,
+        assetTag: d.assetTag || 'N/A',
+        serialNumber: d.serialNumber || 'N/A',
+        temperature: d.diagnosticResults?.C_TEMP || d.diagnosticResults?.F_TEMP || 'N/A',
+        failureMode: d.selectedSymptom || 'N/A',
+        faultType: d.likelyCause || 'N/A',
+        technicianNeeded: d.emergencyDetected ? 'YES (Emergency)' : 'TBC (Technician Required)',
         history: session.history
     };
-    await sendFaultNotification(data, session.media);
+
+    // 1. Send Notification
+    try {
+        await sendFaultNotification(data, session.media || []);
+    } catch (e) {
+        console.error('[WhatsApp] Notification failed:', e);
+    }
+
+    // 2. Database Persistence
+    if (supabase) {
+        try {
+            // Insert Ticket
+            const { error: tErr } = await supabase.from('tickets').insert([{
+                ticket_id: ticketId,
+                store: d.store,
+                reporter: d.reporter,
+                category: d.category,
+                equipment: d.equipment,
+                location: d.equipmentLocation,
+                brand: d.brand,
+                model: d.model,
+                asset_tag: d.assetTag,
+                serial_number: d.serialNumber,
+                criticality: d.equipmentProfile?.criticality,
+                power_status: d.powerStatus,
+                fault_type: d.selectedSymptom,
+                safety_risk: d.safetyRisk,
+                emergency_type: d.emergencyType || 'None',
+                operational_impact: d.operationalImpact,
+                priority: p.label,
+                priority_level: p.level,
+                sla: p.sla,
+                service_provider: d.equipmentProfile?.provider || 'FM Manager',
+                photo_attached: !!(session.media && session.media.length > 0)
+            }]);
+            if (tErr) throw tErr;
+
+            // Insert Findings
+            if (d.diagnosticResults) {
+                const findings = Object.entries(d.diagnosticResults).map(([key, val]) => ({
+                    ticket_id: ticketId,
+                    finding_key: key,
+                    finding_value: String(val)
+                }));
+                await supabase.from('ticket_findings').insert(findings);
+            }
+
+            // Insert Food Safety
+            if (d.foodSafetyResults) {
+                await supabase.from('ticket_food_safety').insert([{
+                    ticket_id: ticketId,
+                    cold_chain_compromised: d.foodSafetyResults.FS_COLDCHAIN === 'Yes',
+                    product_above_temp: d.foodSafetyResults.FS_PRODTEMP === 'Yes',
+                    contamination_risk: d.foodSafetyResults.FS_CONTAM === 'Yes',
+                    production_stopped: d.foodSafetyResults.FS_PRODUCTION === 'Yes',
+                    stock_at_risk: d.foodSafetyResults.FS_STOCK === 'Yes'
+                }]);
+            }
+        } catch (dbErr) {
+            console.error('[WhatsApp] Database persistence failed:', dbErr);
+        }
+    }
     session.media = [];
 }
 
@@ -93,25 +205,34 @@ module.exports = async (req, res) => {
         const message = value?.messages?.[0];
         if (!message) return res.status(200).end();
         const from = message.from;
-        const session = getSession(`wa-${from}`);
+        const session = await getSession(from);
         let userText = "";
         if (message.type === 'text') userText = message.text.body;
         else if (message.type === 'interactive') userText = message.interactive.button_reply?.title || message.interactive.list_reply?.title;
         else if (message.type === 'image' || message.type === 'video') {
             const mediaId = message.image?.id || message.video?.id;
             const mediaData = await downloadWhatsAppMedia(mediaId);
-            if (mediaData) { session.media.push(mediaData); userText = "[Sent " + message.type + "]"; }
+            if (mediaData) {
+                if (!session.media) session.media = [];
+                session.media.push(mediaData);
+                userText = "[Sent " + message.type + "]";
+            }
         }
         if (userText) {
+            if (!session.history) session.history = [];
             session.history.push({ role: 'user', content: userText });
-            const reply = await getLogicResponse(`wa-${from}`, userText, session);
+            const reply = await getLogicResponse(from, userText, session);
             session.history.push({ role: 'assistant', content: reply });
-            await axios.post(`https://graph.facebook.com/v17.0/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`, formatWhatsAppPayload(from, reply), {
+
+            await saveSession(from, session);
+
+            await axios.post(`https://graph.facebook.com/v21.0/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`, formatWhatsAppPayload(from, reply), {
                 headers: { Authorization: `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}` }
             });
-            if (reply.includes('━━━ FM FAULT REPORT #')) {
-                await handleCompletedReport(session, `wa-${from}`, reply);
+            if (reply.includes('submitted successfully')) {
+                await handleCompletedReport(session, from, reply);
                 session.history = [];
+                await saveSession(from, session);
             }
         }
     } catch (e) { console.error('WA Error:', e.response?.data || e.message); }
