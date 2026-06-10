@@ -95,7 +95,8 @@ async function sendWhatsAppManagerNotification(reportData, media) {
         return;
     }
 
-    const url = `https://graph.facebook.com/v17.0/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`;
+    const API_VERSION = 'v21.0';
+    const url = `https://graph.facebook.com/${API_VERSION}/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`;
     const headers = { 
         'Authorization': `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}`,
         'Content-Type': 'application/json'
